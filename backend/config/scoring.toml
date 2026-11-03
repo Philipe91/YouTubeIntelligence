@@ -1,0 +1,62 @@
+# Parâmetros dos indicadores próprios. Altere e reinicie a API.
+# Nenhum destes valores reproduz fórmula do vidIQ.
+
+[format]
+short_max_seconds = 180        # Shorts podem ter até 3 min; a Data API não informa o formato
+
+[outlier]
+min_age_hours = 6.0            # abaixo disso o vídeo é novo demais para comparar
+min_sample = 5                 # abaixo disso: amostra insuficiente
+medium_sample = 8
+high_sample = 15
+high_measured_share = 0.5      # parcela de pares medidos exigida para confiança alta
+age_tolerance = 0.15           # snapshot aceito sem interpolar se a idade difere até 15%
+band_factor = 1.5              # reserva: par com idade atual entre a/1,5 e a*1,5
+max_gap_factor = 1.0           # intervalo máx. para interpolar, em múltiplos da idade
+max_gap_floor_hours = 48.0
+band_above = 1.5               # faixas de leitura do IDR
+band_high = 3.0
+band_extreme = 8.0
+band_below = 0.67
+
+[vph]
+min_interval_hours = 0.25
+coarse_interval_hours = 72.0
+
+[acceleration]
+window_hours = 24.0
+ratio_up = 1.25
+ratio_down = 0.8
+min_recent_vph = 1.0
+max_gap_factor = 1.5           # intervalo máx. para interpolar borda, em múltiplos da janela
+
+[trends]
+min_videos = 3
+min_channels = 2
+max_terms = 40
+
+[opportunity]
+weight_demand = 0.4
+weight_competition = 0.3
+weight_relevance = 0.3
+demand_anchor_views_per_day = 100000.0
+competition_anchor_subscribers = 1000000.0
+competition_weight_authority = 0.5
+competition_weight_supply = 0.3
+competition_weight_saturation = 0.2
+saturation_anchor_results = 1000000.0
+recent_days = 30
+min_confidence = 40.0
+confidence_full_sample = 30
+confidence_full_channels = 12
+
+[retention]
+restricted_days = 30           # dados de terceiros sem aprovação
+text_days = 30                 # títulos, nomes, descrições
+approved_stats_months = 36
+authorization_check_days = 30
+
+[snapshots]
+# Idade máxima em horas -> intervalo entre snapshots em horas
+tiers = [[48.0, 1.0], [168.0, 6.0], [720.0, 24.0], [100000.0, 168.0]]
+max_videos_per_run = 2000

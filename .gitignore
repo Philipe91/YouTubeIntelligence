@@ -1,0 +1,25 @@
+# Segredos
+.env
+.env.*
+!.env.example
+client_secret*.json
+*token*.json
+
+# Dados locais
+data/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+logs/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Node
+node_modules/
+.next/
+next-env.d.ts
+*.tsbuildinfo
