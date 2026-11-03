@@ -4,11 +4,18 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from app.config import Settings, load_scoring
+from app.config import ComplianceRecord, Settings, load_scoring
 from app.db import connect, migrate
 from app.metrics.core import Snapshot, VideoSeries
 
 T0 = datetime(2026, 9, 1, tzinfo=UTC)
+
+# Registro fictício, só para testar o estado liberado. Não representa aprovação real.
+APPROVED = ComplianceRecord(
+    status="approved", use_case="analytics_reporting", amendment_accepted=True, compliance_audit_passed=True,
+    google_case_ref="caso-de-teste", approved_on="2026-01-01", review_by="2099-01-01",
+    approved_scopes=("derived_metrics", "extended_storage"), declared_by="teste",
+)
 
 
 @pytest.fixture

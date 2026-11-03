@@ -1,4 +1,8 @@
-"""Registro de cota por balde. O dia de cota do YouTube vira à meia-noite do Pacífico."""
+"""Registro de cota por balde, configurado em config/quota.toml.
+
+O dia de cota do YouTube vira à meia-noite do Pacífico. Método desconhecido ou proibido
+falha antes de qualquer chamada.
+"""
 from __future__ import annotations
 
 import sqlite3
@@ -10,17 +14,13 @@ from ..db import to_iso
 
 PACIFIC = ZoneInfo("America/Los_Angeles")
 
-# Custos da documentação (determine_quota_cost, consultada em 03/11/2026).
-METHOD_COSTS: dict[str, tuple[str, int]] = {
-    "search.list": ("search", 1),
-    "videos.list": ("default", 1),
-    "channels.list": ("default", 1),
-    "playlistItems.list": ("default", 1),
-}
-
 
 class BudgetExceeded(RuntimeError):
     """O limite local configurado acabou; nenhuma chamada foi feita."""
+
+
+class ForbiddenMethod(RuntimeError):
+    """Método de escrita ou publicação: este aplicativo não o chama."""
 
 
 def quota_day(moment: datetime) -> str:
@@ -30,7 +30,16 @@ def quota_day(moment: datetime) -> str:
 class QuotaLedger:
     def __init__(self, conn: sqlite3.Connection, settings: Settings):
         self.conn = conn
-        self.limits = {"default": settings.quota_default_daily, "search": settings.quota_search_daily}
+        self.config = settings.quota
+        self.limits = settings.quota_limits()
+
+    def cost(self, method: str) -> tuple[str, int]:
+        if method in self.config["policy"]["forbidden_methods"]:
+            raise ForbiddenMethod(f"{method} é um método de escrita e não é usado por este aplicativo.")
+        entry = self.config["methods"].get(method)
+        if entry is None:
+            raise KeyError(f"Método sem custo configurado em quota.toml: {method}")
+        return entry["bucket"], entry["units"]
 
     def used(self, bucket: str, moment: datetime) -> int:
         row = self.conn.execute(
@@ -40,7 +49,7 @@ class QuotaLedger:
         return int(row["total"])
 
     def check(self, method: str, moment: datetime) -> None:
-        bucket, units = METHOD_COSTS[method]
+        bucket, units = self.cost(method)
         limit = self.limits[bucket]
         if self.used(bucket, moment) + units > limit:
             raise BudgetExceeded(f"Limite local de cota atingido no balde '{bucket}' ({limit} unidades por dia).")
@@ -55,7 +64,12 @@ class QuotaLedger:
         self.conn.commit()
 
     def usage(self, moment: datetime) -> list[dict]:
-        return [
-            {"bucket": bucket, "used": self.used(bucket, moment), "limit": limit, "quota_day": quota_day(moment)}
-            for bucket, limit in self.limits.items()
-        ]
+        rows = []
+        for name, limit in self.limits.items():
+            bucket = self.config["buckets"][name]
+            rows.append({
+                "bucket": name, "label": bucket.get("label", name), "used": self.used(name, moment), "limit": limit,
+                "google_limit": bucket.get("google_daily"), "verified": bucket.get("verified", False),
+                "note": bucket.get("note"), "quota_day": quota_day(moment),
+            })
+        return rows

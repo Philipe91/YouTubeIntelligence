@@ -20,6 +20,8 @@ Pesquisa feita em 03/11/2026. As descrições do vidIQ vêm de páginas pública
 
 ## 2. Achado crítico: política da API do YouTube
 
+> **Atualização:** a leitura abaixo subestimou os requisitos da exceção, que exige auditoria e aprovação explícita. O texto em vigor neste projeto está em `docs/CONFORMIDADE.md`.
+
 Este é o achado que mais afeta o projeto. As regras abaixo valem também para clientes privados: a definição de "API Client" não traz exceção para uso interno.
 
 | Regra | Efeito no sistema | Fonte |

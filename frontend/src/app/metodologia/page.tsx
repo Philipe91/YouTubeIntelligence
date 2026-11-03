@@ -57,7 +57,7 @@ export default async function Method() {
         </Block>
 
         <Block title="Shorts e vídeos longos">
-          <p>Nunca entram no mesmo cálculo. A Data API não informa se um vídeo é Short: consideramos Short até {short.short_max_seconds} s e rotulamos como estimado, então um vídeo curto comum pode ser mal classificado. Em Meus canais, os totais por tipo de conteúdo vêm do YouTube Analytics.</p>
+          <p>Nunca entram no mesmo cálculo. Para o YouTube, Short é um vídeo quadrado ou vertical de até 3 min enviado desde 15/10/2024; envios anteriores acima de {short.legacy_short_max_seconds} s seguem longos. A Data API não informa proporção nem se o vídeo é Short: usamos duração e data de envio, até {short.short_max_seconds} s, e rotulamos como estimado. Um vídeo 16:9 curto ainda pode ser mal classificado. Em Analytics, os totais por tipo de conteúdo vêm do YouTube.</p>
           <p>O YouTube mudou a forma de contar views:</p>
           <ul className="list-disc pl-4">
             {system.count_changes.map((change) => <li key={change.date}>{shortDate(change.date + "T12:00:00Z")}: {change.description}</li>)}

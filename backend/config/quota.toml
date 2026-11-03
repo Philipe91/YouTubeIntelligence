@@ -1,0 +1,59 @@
+# Cotas da YouTube API, por balde. Consultado em 03/11/2026:
+# https://developers.google.com/youtube/v3/determine_quota_cost
+#
+# google_daily: limite do projeto no Google. Se o Google conceder extensão, altere aqui.
+# local_daily: limite que este aplicativo respeita. Nunca passa do google_daily.
+# Sobrescreva o limite local com YTI_QUOTA_<BALDE>_DAILY, por exemplo YTI_QUOTA_SEARCH_DAILY=50.
+
+[buckets.default]
+label = "Geral (videos, channels, playlistItems)"
+google_daily = 10000
+local_daily = 9000
+verified = true
+
+[buckets.search]
+label = "Busca (search.list)"
+google_daily = 100
+local_daily = 90
+verified = true
+
+[buckets.batch_stats]
+label = "Estatísticas em lote (videos.batchGetStats)"
+google_daily = 10000
+local_daily = 0
+verified = false
+note = "Citado no histórico de revisões, ausente da tabela de custos. Sem uso no aplicativo: limite local zerado."
+
+[buckets.analytics]
+label = "YouTube Analytics (reports.query)"
+local_daily = 200
+verified = false
+note = "Limite do Google não consta nas páginas consultadas; veja no Console do Google Cloud."
+
+[methods."search.list"]
+bucket = "search"
+units = 1
+
+[methods."videos.list"]
+bucket = "default"
+units = 1
+
+[methods."channels.list"]
+bucket = "default"
+units = 1
+
+[methods."playlistItems.list"]
+bucket = "default"
+units = 1
+
+[methods."videos.batchGetStats"]
+bucket = "batch_stats"
+units = 1
+
+[methods."reports.query"]
+bucket = "analytics"
+units = 1
+
+# Métodos de escrita ou publicação. O aplicativo se recusa a chamá-los.
+[policy]
+forbidden_methods = ["videos.insert", "videos.update", "videos.delete", "thumbnails.set"]

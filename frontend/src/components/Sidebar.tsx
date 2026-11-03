@@ -4,12 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const ITEMS = [
+  { href: "/canais", label: "Meus canais dark" },
+  { href: "/fila", label: "Fila de produção" },
   { href: "/", label: "Hoje" },
   { href: "/oportunidades", label: "Oportunidades" },
   { href: "/videos", label: "Vídeos" },
   { href: "/tendencias", label: "Tendências" },
   { href: "/concorrentes", label: "Concorrentes" },
-  { href: "/meus-canais", label: "Meus canais" },
+  { href: "/meus-canais", label: "Analytics" },
 ];
 const SECONDARY = [
   { href: "/sistema", label: "Sistema e cotas" },

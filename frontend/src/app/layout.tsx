@@ -31,14 +31,14 @@ async function ModeBanner() {
   if (status.mode === "demo") {
     return (
       <div className="bg-warn-soft px-6 py-2 text-sm text-warn">
-        Modo demonstração: todos os canais, vídeos e números são fictícios.
+        Modo demonstração: a pesquisa usa dados fictícios. Canais marcados como &ldquo;Seu canal&rdquo; são cadastros seus e nunca recebem esses números.
       </div>
     );
   }
   if (!status.policy.derived_allowed) {
     return (
       <div className="bg-bad-soft px-6 py-2 text-sm text-bad">
-        Dados reais do YouTube, só crus. Scores e VPH estão bloqueados pela política da API.{" "}
+        Pesquisa com dados reais do YouTube, só crus. Scores e VPH estão bloqueados pela política da API.{" "}
         <Link className="underline" href="/sistema">Ver como liberar</Link>
       </div>
     );

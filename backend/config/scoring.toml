@@ -3,6 +3,8 @@
 
 [format]
 short_max_seconds = 180        # Shorts podem ter até 3 min; a Data API não informa o formato
+three_minute_shorts_since = "2024-10-15"  # envios anteriores acima de 1 min seguem longos
+legacy_short_max_seconds = 60
 
 [outlier]
 min_age_hours = 6.0            # abaixo disso o vídeo é novo demais para comparar

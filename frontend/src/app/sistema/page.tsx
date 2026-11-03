@@ -7,7 +7,6 @@ const STATE_LABEL: Record<string, string> = {
   live_restricted: "Dados reais, cálculos bloqueados",
   live_approved: "Dados reais, cálculos liberados",
 };
-const BUCKET_LABEL: Record<string, string> = { default: "Geral (videos, channels, playlistItems)", search: "Busca (search.list)" };
 const JOB_LABEL: Record<string, string> = {
   snapshots: "Snapshots de views", discover_videos: "Novos vídeos de canais monitorados", refresh_channels: "Atualização de canais",
   own_analytics: "Analytics dos meus canais", retention: "Retenção de dados",
@@ -42,9 +41,16 @@ export default async function System() {
               <p className="font-medium text-ink">Para calcular scores e VPH com dados reais</p>
               <ol className="mt-1 list-decimal space-y-1 pl-4">
                 <li>Leia a <a className="text-cobalt underline" href="https://developers.google.com/youtube/terms/derived-metrics-policy" target="_blank" rel="noreferrer noopener">política de métricas derivadas</a>.</li>
-                <li>Envie o <a className="text-cobalt underline" href="https://support.google.com/youtube/contact/yt_api_form" target="_blank" rel="noreferrer noopener">formulário da API do YouTube</a>, com o caso de uso de análise e relatórios.</li>
-                <li>Depois do aceite, grave a referência em <code>YTI_DERIVED_METRICS_APPROVAL_REF</code> no <code>.env</code>.</li>
+                <li>Envie o <a className="text-cobalt underline" href="https://support.google.com/youtube/contact/yt_api_form" target="_blank" rel="noreferrer noopener">pedido de extensão de cota</a>, com o caso de uso de análise e relatórios, e passe pela auditoria de conformidade.</li>
+                <li>Com a aprovação em mãos, preencha <code>backend/config/compliance.toml</code>. O aplicativo não consegue confirmar a aprovação com o Google.</li>
               </ol>
+              {data.mode === "live" && data.policy.problems.length > 0 && (
+                <>
+                  <p className="mt-3 font-medium text-ink">O que ainda falta no registro</p>
+                  <ul className="mt-1 list-disc space-y-0.5 pl-4">{data.policy.problems.map((problem) => <li key={problem}>{problem}</li>)}</ul>
+                </>
+              )}
+              {data.policy.legacy_env_ignored && <p className="mt-3 text-warn">A variável YTI_DERIVED_METRICS_APPROVAL_REF foi ignorada: ela não autoriza mais nada.</p>}
             </div>
           )}
         </Panel>
@@ -67,8 +73,13 @@ export default async function System() {
               const share = bucket.limit ? Math.min(100, (bucket.used / bucket.limit) * 100) : 0;
               return (
                 <li key={bucket.bucket}>
-                  <div className="flex justify-between gap-3 text-sm"><span>{BUCKET_LABEL[bucket.bucket] ?? bucket.bucket}</span><span>{integer(bucket.used)} de {integer(bucket.limit)}</span></div>
+                  <div className="flex justify-between gap-3 text-sm"><span>{bucket.label}</span><span className="shrink-0">{integer(bucket.used)} de {integer(bucket.limit)}</span></div>
                   <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-page"><div className="h-full rounded-full bg-cobalt" style={{ width: `${Math.max(share, bucket.used ? 1 : 0)}%` }} /></div>
+                  <p className="mt-0.5 text-[0.8125rem] text-ink-3">
+                    {bucket.google_limit !== null ? `Limite do Google: ${integer(bucket.google_limit)} por dia.` : "Limite do Google não informado."}
+                    {!bucket.verified && " Não confirmado na tabela oficial de custos."}
+                    {bucket.note && ` ${bucket.note}`}
+                  </p>
                 </li>
               );
             })}

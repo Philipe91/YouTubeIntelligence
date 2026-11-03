@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "yti-producao": {
+      "command": "uv",
+      "args": ["run", "--quiet", "--directory", "backend", "python", "-m", "app.studio.mcp_server"]
+    }
+  }
+}

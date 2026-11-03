@@ -11,11 +11,14 @@ from pydantic import BaseModel
 
 from . import demo, services
 from .ai.generation import GenerationError, generate_for_topic
-from .config import Settings, get_settings
+from .config import Settings
 from .db import connect, migrate, utcnow
+from .deps import settings_dep
 from .logging_safe import install_redaction, redact
 from .policy import PolicyBlocked
 from .scheduler import ensure_jobs
+from .studio import router as studio_router
+from .studio.store import StudioError
 
 install_redaction()
 log = logging.getLogger("yti.api")
@@ -29,10 +32,6 @@ app.add_middleware(
 )
 
 
-def settings_dep() -> Settings:
-    return get_settings()
-
-
 def conn_dep(settings: Settings = Depends(settings_dep)) -> Iterator[sqlite3.Connection]:
     conn = connect(settings.db_path)
     try:
@@ -43,6 +42,14 @@ def conn_dep(settings: Settings = Depends(settings_dep)) -> Iterator[sqlite3.Con
         yield conn
     finally:
         conn.close()
+
+
+app.include_router(studio_router.router)
+
+
+@app.exception_handler(StudioError)
+def handle_studio_error(_request, error: StudioError):
+    return studio_router.studio_error_response(error)
 
 
 FormatParam = Query(default=None, pattern="^(short|long|live)$")

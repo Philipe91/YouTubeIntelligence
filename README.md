@@ -1,33 +1,47 @@
 # YouTube Intelligence
 
-Ferramenta local de inteligência competitiva para canais do YouTube: pesquisa de nicho, canais concorrentes, desempenho relativo, velocidade de views, tendências, oportunidades e geração de ideias. Implementação independente, sem relação com o vidIQ ou o YouTube.
+Central local para gerenciar seus canais dark e pesquisar nichos: cadastro de canais, recomendações por canal, calendário, fila de produção integrada ao Claude Code, além de pesquisa, concorrentes, desempenho relativo e tendências. Implementação independente, sem relação com o vidIQ ou o YouTube.
 
-**Antes de usar dados reais, leia [Modo real](#modo-real):** a política da API do YouTube bloqueia scores e VPH até o Google aceitar o uso analítico.
+**Antes de usar dados reais, leia [Modo real](#modo-real):** a política da API do YouTube bloqueia scores e VPH sem auditoria e aprovação do Google.
 
-## Rodar em modo demonstração
+## Instalar uma vez
 
-Não precisa de credenciais, e todos os dados são fictícios. Requer [uv](https://docs.astral.sh/uv/) e Node 22 ou superior.
-
-Terminal 1, API:
+Requer [uv](https://docs.astral.sh/uv/) e Node 22 ou superior. Não precisa de credenciais.
 
 ```powershell
 cd D:\projetos\YouTubeIntelligence\backend
 uv sync
-uv run python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
-```
-
-Terminal 2, interface:
-
-```powershell
-cd D:\projetos\YouTubeIntelligence\frontend
+cd ..\frontend
 npm install
 npm run build
-npm run start
 ```
 
-Abra <http://127.0.0.1:3000>. O Next.js coleta telemetria anônima por padrão; para desligar: `npx next telemetry disable`.
+## Ligar e desligar
 
-Para recriar os dados fictícios: `uv run python -m app.cli demo-reset`, na pasta `backend`.
+```powershell
+cd D:\projetos\YouTubeIntelligence
+powershell -ExecutionPolicy Bypass -File scripts\iniciar.ps1
+powershell -ExecutionPolicy Bypass -File scripts\parar.ps1
+```
+
+Abra <http://127.0.0.1:3000/canais>. Ligado, o aplicativo usa cerca de 260 MB; desligado, nada. Detalhes em `docs/MEMORIA.md`. Depois de alterar o frontend, rode `npm run build` de novo.
+
+Para recriar os dados fictícios de pesquisa: `uv run python -m app.cli demo-reset`, na pasta `backend`. Isso não toca nos seus canais.
+
+## Meus canais dark
+
+Seus cadastros ficam em `data/studio.sqlite`, valem nos dois modos e não dependem de chave de API.
+
+- **Canais fictícios** (`Fictício`) mostram como a central funciona. Podem ser removidos e não voltam.
+- **Seus canais** (`Seu canal`) nunca recebem dados fictícios. Sem métricas liberadas, as recomendações são editoriais: perfil, ideias e histórico do canal, sem nenhum score.
+
+Na página de cada canal: visão geral, recomendações, fila, calendário, histórico, concorrentes e configurações, incluindo automação. O calendário é interno: nada é agendado no YouTube.
+
+## Claude Code
+
+Abra o Claude Code nesta pasta e aprove o servidor `yti-producao` definido em `.mcp.json`. Depois, peça por exemplo: "use yti-producao para ler o briefing do canal X e propor três recomendações". O contrato completo está em `docs/CONTRATO_AGENTE.md`.
+
+O agente lê, propõe, pede produção e entrega arquivos. Autorizar é com você, na tela Fila de produção, e **não existe publicação**.
 
 ## Testes
 
@@ -59,14 +73,14 @@ Neste estado o aplicativo mostra só dados crus e apaga dados de terceiros após
 
 ### 2. Liberar scores e VPH
 
-A seção III.E.4.h da [política da API](https://developers.google.com/youtube/terms/developer-policies) proíbe métricas derivadas, sem exceção para uso privado. A [política de métricas derivadas](https://developers.google.com/youtube/terms/derived-metrics-policy) abre uma exceção para uso analítico:
+A seção III.E.4.h da [política da API](https://developers.google.com/youtube/terms/developer-policies) proíbe métricas derivadas, sem exceção para uso privado. A seção III.L e a [política de métricas derivadas](https://developers.google.com/youtube/terms/derived-metrics-policy) abrem uma exceção para desenvolvedores auditados e aprovados:
 
-1. Envie o [formulário da API do YouTube](https://support.google.com/youtube/contact/yt_api_form), informando o caso de uso de análise e relatórios.
-2. Depois do aceite, preencha `YTI_DERIVED_METRICS_APPROVAL_REF` no `.env`.
+1. Envie o [pedido de extensão de cota](https://support.google.com/youtube/contact/yt_api_form), com o caso de uso de análise e relatórios, e passe pela auditoria.
+2. Com a aprovação em mãos, preencha `backend/config/compliance.toml`.
 
-O aplicativo não consegue verificar essa referência: preenchê-la é uma declaração sua. Com ela, estatísticas e métricas derivadas ficam até 36 meses; títulos e descrições seguem em 30 dias.
+O aplicativo não consegue confirmar a aprovação: o arquivo é uma declaração sua, e qualquer campo ausente ou vencido mantém tudo bloqueado. Detalhes em `docs/CONFORMIDADE.md`.
 
-### 3. Meus canais (Analytics)
+### 3. Analytics dos seus canais
 
 1. Ative a **YouTube Analytics API** no mesmo projeto.
 2. Crie um cliente OAuth do tipo **App para computador**, baixe o JSON para fora do repositório e aponte `YOUTUBE_OAUTH_CLIENT_SECRETS` para ele.
@@ -108,7 +122,8 @@ Títulos e descrições de outros canais são tratados como dados não confiáve
 |---|---|
 | Ver cota e tarefas | Tela **Sistema e cotas** |
 | Ajustar fórmulas e limites | `backend/config/scoring.toml`, depois reinicie a API |
-| Alterar o banco | Novo arquivo numerado em `backend/migrations/`; é aplicado ao iniciar |
+| Ajustar cotas | `backend/config/quota.toml` ou `YTI_QUOTA_<BALDE>_DAILY` |
+| Alterar o banco | Novo arquivo numerado em `backend/migrations/` ou `backend/migrations_studio/`; é aplicado ao iniciar |
 | Apagar dados de um canal | `uv run python -m app.cli delete-channel-data UC...` |
 | Backup | Copie `data/` com a API parada |
 | Revisar a política | Reler as políticas do YouTube periodicamente; elas mudaram em 2026 |
@@ -125,6 +140,10 @@ claude mcp add --transport http vidiq https://mcp.vidiq.com/mcp
 
 - [Arquitetura](ARQUITETURA.md)
 - [Plano](PLANO.md)
+- [Relatório da versão multicanal](docs/RELATORIO_MULTICANAL.md)
+- [Contrato do agente](docs/CONTRATO_AGENTE.md)
+- [Conformidade](docs/CONFORMIDADE.md)
+- [Memória](docs/MEMORIA.md)
 - [Relatório de equivalência e auditoria](docs/RELATORIO_EQUIVALENCIA.md)
 - [Cotas e custos](docs/COTAS_E_CUSTOS.md)
 - [Pendências](docs/PENDENCIAS.md)

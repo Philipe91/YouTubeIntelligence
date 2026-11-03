@@ -187,11 +187,11 @@ export interface OwnChannel {
 
 export interface SystemStatus {
   mode: "demo" | "live";
-  policy: { state: string; derived_allowed: boolean; stats_retention: string; text_retention_days: number; description: string; approval_declared: boolean };
+  policy: { state: string; derived_allowed: boolean; stats_retention: string; text_retention_days: number; description: string; extended_storage: boolean; problems: string[]; record_status: string; legacy_env_ignored: boolean };
   credentials: { youtube_api_key: boolean; oauth_client: boolean; own_channels_authorized: number };
   ai: { provider: string; model: string | null };
   vidiq: { enabled: boolean; note: string; how_to_enable: string };
-  quota: { bucket: string; used: number; limit: number; quota_day: string }[];
+  quota: { bucket: string; label: string; used: number; limit: number; google_limit: number | null; verified: boolean; note: string | null; quota_day: string }[];
   jobs: { name: string; interval_minutes: number; enabled: number; last_run_at: string | null; last_status: string | null; last_error: string | null }[];
   counts: Record<string, number>;
   count_changes: { date: string; description: string }[];

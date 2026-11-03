@@ -15,7 +15,7 @@ import httpx
 from ..config import Settings
 from ..db import from_iso, to_iso, utcnow
 from ..logging_safe import redact
-from .quota import METHOD_COSTS, QuotaLedger
+from .quota import QuotaLedger
 
 BASE_URL = "https://www.googleapis.com/youtube/v3"
 MAX_ATTEMPTS = 4
@@ -99,7 +99,7 @@ class YouTubeDataClient:
             if cached is not None:
                 return cached
 
-        bucket, units = METHOD_COSTS[method]
+        bucket, units = self.ledger.cost(method)
         last_error: YouTubeApiError | None = None
         for attempt in range(MAX_ATTEMPTS):
             # Toda tentativa consome cota, inclusive as inválidas.

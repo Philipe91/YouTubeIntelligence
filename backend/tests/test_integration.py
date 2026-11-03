@@ -17,6 +17,7 @@ from app.connectors.youtube_data import QuotaExceeded, YouTubeApiError, YouTubeD
 from app.db import connect, migrate, to_iso
 from app.logging_safe import RedactingFilter, redact
 
+from .conftest import APPROVED
 from .yt_mock import FakeYouTube, error_response
 
 NOW = datetime(2026, 10, 1, 12, tzinfo=UTC)
@@ -227,7 +228,7 @@ def test_policy_states(tmp_path):
     live = _live(tmp_path)
     assert policy.policy_state(live).state == policy.LIVE_RESTRICTED
     assert not policy.policy_state(live).derived_allowed
-    approved = dataclasses.replace(live, approval_ref="caso-123")
+    approved = dataclasses.replace(live, compliance=APPROVED)
     assert policy.policy_state(approved).state == policy.LIVE_APPROVED
     assert policy.policy_state(approved).derived_allowed
 
@@ -275,7 +276,7 @@ def test_retention_deletes_text_not_refreshed_in_30_days(conn, live_settings):
 
 
 def test_retention_approved_keeps_stats_for_36_months(conn, live_settings):
-    approved = dataclasses.replace(live_settings, approval_ref="caso-123")
+    approved = dataclasses.replace(live_settings, compliance=APPROVED)
     fake = FakeYouTube(NOW)
     client, _ = _seed_channel(conn, approved, fake)
     conn.execute("UPDATE videos SET text_refreshed_at = ?", (to_iso(NOW + timedelta(days=400)),))
@@ -694,7 +695,7 @@ def _second_channel_items(fake):
 
 def test_full_flow_niche_channel_videos_performance_opportunity(conn, live_settings):
     """Pesquisar nicho > identificar canal > coletar vídeos > calcular desempenho > recomendar oportunidade."""
-    settings = dataclasses.replace(live_settings, approval_ref="teste", quota_default_daily=1000)
+    settings = dataclasses.replace(live_settings, compliance=APPROVED, quota_default_daily=1000)
     fake = FakeYouTube(NOW, video_count=24)
     client = client_for(fake, conn, settings)
 
@@ -762,7 +763,7 @@ def test_api_generate_and_detail(api):
 def test_system_endpoint_exposes_no_secret(tmp_path):
     from app.config import Settings
 
-    settings = Settings(mode="live", youtube_api_key="AIzaSECRETSECRETSECRET1234567", approval_ref="", data_dir=tmp_path)
+    settings = Settings(mode="live", youtube_api_key="AIzaSECRETSECRETSECRET1234567", data_dir=tmp_path)
     main.app.dependency_overrides[main.settings_dep] = lambda: settings
     try:
         body = TestClient(main.app).get("/api/system").text

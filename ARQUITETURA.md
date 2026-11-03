@@ -59,9 +59,25 @@ Definidos em `app/policy.py`, com base nas regras descritas em `docs/RELATORIO_E
 |---|---|---|---|---|
 | `demo` | Padrão | Fictícios, `data/demo.sqlite` | Liberadas | Sem limite (não há dado da API) |
 | `live_restricted` | `YTI_MODE=live` | API real, `data/live.sqlite` | **Bloqueadas** | Tudo de terceiros: 30 dias |
-| `live_approved` | `YTI_MODE=live` + `YTI_DERIVED_METRICS_APPROVAL_REF=<referência>` | API real | Liberadas, com aviso de origem | Estatísticas e derivadas: 36 meses; textos: 30 dias com refresh |
+| `live_approved` | `YTI_MODE=live` + registro completo em `config/compliance.toml` | API real | Liberadas, com aviso de origem | 36 meses só com o escopo `extended_storage`; textos: 30 dias com refresh |
 
-A referência de aprovação é uma declaração sua de que o Google aceitou o uso analítico. O app não consegue verificá-la e registra isso na tela Sistema.
+O registro é uma declaração sua de que o Google aprovou o uso. O app não consegue verificá-la e registra isso na tela Sistema. Detalhes em `docs/CONFORMIDADE.md`.
+
+## 3a. Estúdio multicanal
+
+`app/studio/` gerencia seus canais, em banco próprio (`data/studio.sqlite`), independente do modo e sem dados da API.
+
+| Módulo | Função |
+|---|---|
+| `store.py` | Canais, concorrentes, histórico, calendário, recomendações. Consultas limitadas por canal |
+| `recommend.py` | Cruza pesquisas com o perfil editorial. Canal real nunca usa dado fictício |
+| `contract.py` | Contrato `yti.agent.v1`: estados, idempotência, lease, recuperação |
+| `simulator.py` | Agente simulado, uma etapa por chamada, sem render nem arquivos |
+| `mcp_server.py` | Servidor MCP stdio para o Claude Code. Sem ferramentas de autorizar ou publicar |
+| `status.py` | Estado do YouTube e do Claude, só leitura e sem rede |
+| `router.py` | API usada pelo dashboard |
+
+Contrato em `docs/CONTRATO_AGENTE.md`.
 
 ## 4. Banco de dados
 

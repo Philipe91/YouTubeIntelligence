@@ -6,7 +6,7 @@ Preços e cotas consultados em 03/11/2026. Confira as fontes antes de decidir: e
 
 As APIs não cobram por uso dentro da cota. Limites padrão: 10.000 unidades por dia no balde geral e 100 chamadas de `search.list` por dia no balde próprio ([fonte](https://developers.google.com/youtube/v3/determine_quota_cost)). A cota vira à meia-noite do Pacífico.
 
-O aplicativo para antes do limite, com valores locais de 9.000 e 90, configuráveis no `.env`. Toda tentativa conta, inclusive as que falham.
+O aplicativo para antes do limite, com valores locais de 9.000 e 90, configuráveis por balde em `backend/config/quota.toml` ou no `.env`. Toda tentativa conta, inclusive as que falham. A central de canais e o servidor MCP não consomem cota do YouTube.
 
 | Operação | Chamadas | Balde |
 |---|---|---|

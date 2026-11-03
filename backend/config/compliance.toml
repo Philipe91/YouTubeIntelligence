@@ -1,0 +1,35 @@
+# Registro de conformidade com as políticas da API do YouTube.
+#
+# Este arquivo é a ÚNICA forma de liberar métricas derivadas com dados reais. Ele é uma
+# declaração do operador: o aplicativo não consegue confirmá-la com o Google. Preencha
+# somente depois de receber a aprovação, e guarde a resposta do Google.
+#
+# Regra das políticas (III.L, III.D.5): a exceção vale para desenvolvedores auditados, com
+# uso analítico, explicitamente aprovados pelo pedido padrão de extensão de cota.
+# Qualquer campo ausente, inválido ou vencido mantém tudo bloqueado.
+
+# not_requested | requested | approved | denied | revoked
+status = "not_requested"
+
+# Exigido para liberar: "analytics_reporting"
+use_case = ""
+
+# A emenda às políticas foi aceita (Section 5: Use Cases > Analytics & Reporting)?
+amendment_accepted = false
+
+# A API Compliance Audit foi concluída com aprovação?
+compliance_audit_passed = false
+
+# Referência do caso na resposta do Google
+google_case_ref = ""
+
+# Datas no formato AAAA-MM-DD
+approved_on = ""
+# Revise a aprovação até esta data; depois dela, tudo volta a ficar bloqueado.
+review_by = ""
+
+# Escopos aprovados: "derived_metrics" e/ou "extended_storage"
+approved_scopes = []
+
+# Quem preencheu este registro
+declared_by = ""

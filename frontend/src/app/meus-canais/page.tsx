@@ -20,7 +20,7 @@ export default async function OwnChannels() {
   const channels = await api<OwnChannel[]>("/api/own-channels");
   return (
     <>
-      <PageHeader title="Meus canais" intro="Dados da YouTube Analytics API, só dos canais que você autorizar. O acesso é somente leitura." />
+      <PageHeader title="Analytics" intro="Dados da YouTube Analytics API, só dos canais que você autorizar. O acesso é somente leitura." />
       {channels.length === 0 && (
         <Panel><Empty title="Nenhum canal autorizado.">Rode o comando authorize-channel depois de configurar o OAuth. O passo a passo está no README.</Empty></Panel>
       )}

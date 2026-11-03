@@ -88,7 +88,7 @@ def analyze(conn: sqlite3.Connection, settings: Settings) -> Analysis:
 
 FORMAT_SOURCE_LABEL = {
     "analytics": ("measured", "YouTube Analytics (creatorContentType)"),
-    "duration": ("estimated", "Estimado pela duração: a Data API não informa se é Short"),
+    "duration": ("estimated", "Estimado por duração e data de envio: a Data API não informa proporção nem se é Short"),
     "broadcast": ("measured", "liveStreamingDetails"),
     "missing": ("unavailable", "Duração ausente"),
 }
@@ -512,7 +512,9 @@ def system_status(conn: sqlite3.Connection, settings: Settings) -> dict:
         "policy": {
             "state": state.state, "derived_allowed": state.derived_allowed, "stats_retention": state.stats_retention,
             "text_retention_days": state.text_retention_days, "description": state.description,
-            "approval_declared": bool(settings.approval_ref),
+            "extended_storage": state.extended_storage, "problems": list(state.problems),
+            "record_status": settings.compliance.status,
+            "legacy_env_ignored": settings.legacy_approval_env_set,
         },
         "credentials": {
             "youtube_api_key": bool(settings.youtube_api_key),

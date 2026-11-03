@@ -7,6 +7,7 @@ from typing import Any
 
 from .config import Settings
 from .connectors import oauth, youtube_analytics
+from .connectors.quota import QuotaLedger
 from .connectors.youtube_data import YouTubeDataClient, YouTubeApiError
 from .db import from_iso, to_iso
 from .metrics.classify import classify_format, parse_duration
@@ -53,10 +54,14 @@ def upsert_channel(conn: sqlite3.Connection, item: dict, now: datetime, *, is_ow
 def upsert_video(conn: sqlite3.Connection, item: dict, now: datetime, settings: Settings) -> str:
     snippet = item.get("snippet", {})
     duration = parse_duration(item.get("contentDetails", {}).get("duration"))
+    format_config = settings.scoring["format"]
     video_format, source = classify_format(
-        duration, settings.scoring["format"]["short_max_seconds"],
+        duration, format_config["short_max_seconds"],
         live_broadcast_content=snippet.get("liveBroadcastContent"),
         has_live_details="liveStreamingDetails" in item,
+        published_at=snippet.get("publishedAt"),
+        short_cutoff=format_config["three_minute_shorts_since"],
+        legacy_short_max_seconds=format_config["legacy_short_max_seconds"],
     )
     stamp = to_iso(now)
     language = snippet.get("defaultAudioLanguage") or snippet.get("defaultLanguage")
@@ -248,9 +253,17 @@ def sync_own_analytics(conn: sqlite3.Connection, settings: Settings, store: oaut
                 delete_channel_data(conn, channel_id)
                 continue
             raise
-        rows_out = youtube_analytics.fetch_daily_by_content_type(
-            access, (now - timedelta(days=days)).date().isoformat(), now.date().isoformat(), transport
-        )
+        ledger = QuotaLedger(conn, settings)
+        ledger.check("reports.query", now)
+        bucket, units = ledger.cost("reports.query")
+        try:
+            rows_out = youtube_analytics.fetch_daily_by_content_type(
+                access, (now - timedelta(days=days)).date().isoformat(), now.date().isoformat(), transport
+            )
+        except youtube_analytics.AnalyticsError as error:
+            ledger.record("analytics", "reports.query", bucket, units, None, type(error).__name__, now)
+            raise
+        ledger.record("analytics", "reports.query", bucket, units, 200, None, now)
         for item in rows_out:
             conn.execute(
                 """INSERT OR REPLACE INTO analytics_daily (channel_id, day, content_type, views, estimated_minutes_watched,
