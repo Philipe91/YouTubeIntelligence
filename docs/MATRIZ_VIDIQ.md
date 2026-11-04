@@ -9,7 +9,7 @@ Cada recurso responde às dez perguntas pedidas:
 - **Nossa proposta**, **Limite de API** e **Google**: como fazemos e o que depende de autorização.
 - **Estado**: situação no YouTube Intelligence, atualizada a cada etapa.
 
-> **Como ler "feito":** implementado, com testes automáticos e validado no navegador com dados fictícios e com um YouTube falso. **Nenhum módulo falou com a API real do YouTube**, porque não há chave configurada. Limites em `docs/INTELIGENCIA.md`.
+> **Como ler "feito":** implementado, com testes automáticos e validado no navegador com dados fictícios e com uma API simulada no formato oficial. **Nenhuma consulta com dados reais foi feita**, porque não há chave configurada. A validação real está preparada e pendente. Limites em `docs/INTELIGENCIA.md`.
 
 ## Resumo
 

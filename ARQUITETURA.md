@@ -90,7 +90,11 @@ Contrato em `docs/CONTRATO_AGENTE.md`. Produção real em `docs/INTEGRACAO_BROTH
 | Módulo | Função |
 |---|---|
 | `common.py` | Origem dos dados, canal compatível com o modo, erros da API, CSV seguro |
-| `research.py` | Pesquisas, histórico, salvos, comparação e exportação |
+| `research.py` | Pesquisas, proveniência, histórico, salvos, comparação e exportação |
+| `discovery.py` | Descoberta por nicho: observado, estimado, hipóteses e itens salvos |
+| `automation.py` | Pesquisas agendadas: aprovação, limites, duplicadas, pausas e histórico |
+| `api_status.py` | Situação da chave, teste de conexão e última validação real |
+| `titles.py` | Títulos por regras: entende o assunto, escreve três ângulos e revisa |
 | `keywords.py` | Análise de termo, favoritas, termos de descoberta e sugestões por canal |
 | `explorer.py` | Busca na base, lista de estudo, comparação de títulos |
 | `competitors.py` | Lista por canal, vídeos, calendário, padrões, oportunidades e relatório |
@@ -120,6 +124,8 @@ Migrações em `backend/migrations/`.
 | `keyword_lookups`, `own_search_terms` | Histórico de termos e buscas que levaram ao canal |
 | `study_videos`, `editorial_opportunities` | Lista de estudo e oportunidades por canal |
 | `coach_conversations`, `coach_messages`, `coach_tool_calls` | Conversas, custo e ferramentas usadas |
+| `research_schedules`, `schedule_events`, `automation_settings` | Agendamentos, histórico e aprovação dos limites |
+| `api_checks` | Testes de conexão. Só os do Google contam como validação real |
 
 No estúdio, `keyword_favorites`, `lab_projects` e `lab_variations` guardam o que é só seu.
 

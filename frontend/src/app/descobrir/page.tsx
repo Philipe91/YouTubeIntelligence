@@ -72,7 +72,7 @@ function History({ data, href }: { data: Page<Run>; href: (offset: number) => st
           <li key={run.id} className="flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
             <span className="min-w-0">
               <Link className="font-medium text-cobalt underline underline-offset-2" href={`/descobrir/${run.id}`}>{run.query}</Link>
-              <span className="ml-2 text-ink-3">{[run.filters.niche, run.filters.subniche, run.kind_label].filter(Boolean).join(", ")}. {run.result_count} resultados.</span>
+              <span className="ml-2 text-ink-3">{[run.filters.niche, run.filters.subniche, run.kind_label].filter(Boolean).join(", ")}. {run.result_count} {run.result_count === 1 ? "resultado" : "resultados"}.</span>
             </span>
             <span className="flex items-center gap-2 text-ink-3">{dateTime(run.executed_at)}<OriginPill fictional={run.fictional} simulated={run.simulated} /></span>
           </li>

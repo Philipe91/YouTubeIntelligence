@@ -75,6 +75,16 @@ def _unusable(ctx: ToolContext) -> ToolResult:
     return ToolResult(summary="Sem dados de pesquisa neste modo.", limits=[reason])
 
 
+def _day(stamp: str) -> str:
+    """Data como aparece no resto do painel."""
+    year, month, day = stamp[:10].split("-")
+    return f"{day}/{month}/{year}"
+
+
+def _results(count: int) -> str:
+    return f"{count} resultado" if count == 1 else f"{count} resultados"
+
+
 def _ref(result: ToolResult, ref: str, label: str, url: str | None = None) -> str:
     result.refs[ref] = {"label": label, "url": url}
     return ref
@@ -128,7 +138,7 @@ def tool_ideas(ctx: ToolContext, _args: dict) -> ToolResult:
         ref = _ref(result, f"ideia:{item['id']}", f"Ideia: {item['subject']}", f"/ideias?canal={ctx.channel['id']}&filtro={'salvas' if item['status'] == 'aceita' else 'novas'}")
         result.facts.append({"text": f"A ideia \"{item['subject']}\" tem prioridade {item['editorial_priority']} e dificuldade estimada {item['difficulty']}. Motivo: {item['justification']}", "refs": [ref]})
     first = (saved["items"] + data["items"])[0]
-    result.suggestions.append({"text": f"Comece por \"{first['subject']}\" e confira os fatos antes de escrever. Títulos possíveis: {'; '.join(first['titles'][:3]) or 'gere na página da ideia'}.", "refs": [f"ideia:{first['id']}"]})
+    result.suggestions.append({"text": f"Comece por \"{first['subject']}\" e confira os fatos antes de escrever. Títulos possíveis: {'; '.join(first['titles'][:3]) or 'gere na página da ideia'}.", "why": f"É a primeira da sua lista, por prioridade. Motivo registrado: {first['justification']}", "refs": [f"ideia:{first['id']}"]})
     return result
 
 
@@ -140,7 +150,7 @@ def tool_keywords_for_channel(ctx: ToolContext, _args: dict) -> ToolResult:
         result.facts.append({"text": f"O termo \"{item['term']}\": {item['reason']}", "refs": [ref]})
     gap = next((item for item in data["items"] if item["origin"] in {"perfil", "backlog"}), None)
     if gap:
-        result.suggestions.append({"text": f"Pesquise hoje \"{gap['term']}\": {gap['reason']}", "refs": [f"termo:{gap['term']}"]})
+        result.suggestions.append({"text": f"Pesquise hoje \"{gap['term']}\".", "why": gap["reason"], "refs": [f"termo:{gap['term']}"]})
     if data["trends_blocked"]:
         result.limits.append("Tendências estão bloqueadas: faltam auditoria e aprovação do Google.")
     if not data["uses_research"]:
@@ -184,7 +194,7 @@ def tool_competitors(ctx: ToolContext, _args: dict) -> ToolResult:
     for item in data["items"][:6]:
         ref = _ref(result, f"concorrente:{item['id']}", f"Concorrente: {item['name']}", f"/canais/{ctx.channel['id']}/concorrentes/{item['id']}" if item["linked"] else f"/canais/{ctx.channel['id']}/concorrentes")
         if item["linked"]:
-            published = f" Último vídeo coletado: {item['last_published_at'][:10]}." if item["last_published_at"] else ""
+            published = f" Último vídeo coletado: {_day(item['last_published_at'])}." if item["last_published_at"] else ""
             # Sem aprovação, nada de contagem por período nem de comparação entre canais: é métrica derivada.
             cadence = f", {len(item['recent_days_uploads'])} nos últimos 90 dias" if allowed else ""
             result.facts.append({"text": f"{item['channel']['title']} tem {item['videos_collected']} vídeos coletados{cadence}.{published}", "refs": [ref]})
@@ -209,7 +219,7 @@ def tool_research(ctx: ToolContext, _args: dict) -> ToolResult:
         return result
     for run in data["items"]:
         ref = _ref(result, f"pesquisa:{run['id']}", f"Pesquisa: {run['query']}", f"/pesquisa/{run['id']}")
-        result.facts.append({"text": f"Pesquisa \"{run['query']}\" ({run['kind_label']}) em {run['executed_at'][:10]}, com {run['result_count']} resultados.", "refs": [ref]})
+        result.facts.append({"text": f"Pesquisa \"{run['query']}\" ({run['kind_label']}) em {_day(run['executed_at'])}, com {_results(run['result_count'])}.", "refs": [ref]})
     return result
 
 
@@ -222,15 +232,15 @@ def tool_research_results(ctx: ToolContext, _args: dict) -> ToolResult:
         return ToolResult(summary="Nenhuma pesquisa associada a este canal.", limits=["Faça uma pesquisa associada a este canal em Descobrir oportunidades."])
     run = runs[0]
     data = research.run_items(ctx.conn, ctx.settings, run["id"], limit=5)
-    day = run["executed_at"][:10]
+    day = _day(run["executed_at"])
     origin = "fictícia" if run["fictional"] else "simulada de teste" if run["simulated"] else "da API do YouTube"
-    result = ToolResult(summary=f"Pesquisa \"{run['query']}\" de {day}: {run['result_count']} resultados, origem {origin}.")
+    result = ToolResult(summary=f"Pesquisa \"{run['query']}\" de {day}: {_results(run['result_count'])}, origem {origin}.")
     run_ref = _ref(result, f"pesquisa:{run['id']}", f"Pesquisa: {run['query']}", f"/pesquisa/{run['id']}")
     for video in data["videos"]:
         ref = _ref(result, f"video:{video['id']}", f"Vídeo: {video['title']}", video["source_url"] or f"/videos/{video['id']}")
         views = video["views"]
-        measured = f", com {views['value']} views públicas medidas em {views['as_of'][:10]}" if views["value"] is not None and views["as_of"] else ", sem contagem pública de views"
-        result.facts.append({"text": f"\"{video['title']}\", de {video['channel_title']}, publicado em {video['published_at'][:10]}{measured}.", "refs": [ref, run_ref]})
+        measured = f", com {views['value']} views públicas medidas em {_day(views['as_of'])}" if views["value"] is not None and views["as_of"] else ", sem contagem pública de views"
+        result.facts.append({"text": f"\"{video['title']}\", de {video['channel_title']}, publicado em {_day(video['published_at'])}{measured}.", "refs": [ref, run_ref]})
     for channel in data["channels"]:
         ref = _ref(result, f"canal:{channel['id']}", f"Canal: {channel['title']}", channel["source_url"] or f"/concorrentes/{channel['id']}")
         count = channel["subscribers"]["value"]
@@ -256,9 +266,9 @@ def tool_saved(ctx: ToolContext, _args: dict) -> ToolResult:
     for item in items[:6]:
         ref = _ref(result, f"salvo:{item['id']}", f"Salvo: {item['title']}", item["source_url"] or link)
         note = f" Sua nota: {item['note']}" if item["note"] else ""
-        result.facts.append({"text": f"Você salvou \"{item['title']}\" em {item['created_at'][:10]}.{note}", "refs": [ref]})
+        result.facts.append({"text": f"Você salvou \"{item['title']}\" em {_day(item['created_at'])}.{note}", "refs": [ref]})
     theme = next((item for item in items if item["item_type"] == "tema"), items[0])
-    result.suggestions.append({"text": f"Decida se \"{theme['title']}\" vira ideia ou sai da lista.", "why": f"Está salvo desde {theme['created_at'][:10]} e ainda não teve decisão.", "refs": [f"salvo:{theme['id']}"]})
+    result.suggestions.append({"text": f"Decida se \"{theme['title']}\" vira ideia ou sai da lista.", "why": f"Está salvo desde {_day(theme['created_at'])} e ainda não teve decisão.", "refs": [f"salvo:{theme['id']}"]})
     return result
 
 

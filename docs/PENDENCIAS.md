@@ -10,19 +10,25 @@ Situação em 04/11/2026. Para o primeiro canal real, veja `docs/PRIMEIRO_CANAL_
 | Autorizar a correção do céu no projeto original | Hoje vale só na cópia de cada tarefa. Veja `docs/INTEGRACAO_BROTHER_QUILL.md` |
 | Cadastrar seus canais reais | A central já aceita |
 | Decidir sobre o pedido ao Google | Sem aprovação, scores e VPH ficam bloqueados com dados reais. Veja `docs/CONFORMIDADE.md` |
-| Chave da YouTube Data API e cliente OAuth | Opcionais para produzir; necessários para dados reais |
+| Chave da YouTube Data API | Sem ela, a validação real fica pendente. Passos em `docs/CONFIGURAR_YOUTUBE_API.md` |
+| Cliente OAuth | Só para o Analytics dos seus canais |
+| Aprovar os limites das pesquisas agendadas | Depois da chave e de uma consulta real confirmada. Desligado até lá |
+| **Nome do aplicativo** | As diretrizes de marca proíbem "YouTube" e "YT" no nome geral. Veja `docs/POLITICA_DE_DADOS.md` |
+| Perguntar ao Google sobre uso privado | A política não traz exceção para cliente privado, inclusive quanto à tela de aceite da III.A |
 
 ## Não validado com serviços reais
 
 Passou em testes com mocks e nunca falou com o serviço verdadeiro:
 
-- YouTube Data API: formato das respostas, cota, `forHandle` e **o uso do tamanho do player para separar Shorts**.
+- YouTube Data API, em qualquer consulta com dados: `search.list`, `videos.list`, `channels.list`, `forHandle`, cota real e **o uso do tamanho do player para separar Shorts**. Conferidos só: o esquema público e as respostas de chave inválida e de chave ausente.
+- Motivos de erro `accessNotConfigured`, restrição de chave e `quotaExceeded`: seguem a documentação, sem captura real.
 - Fluxo OAuth no navegador, incluindo o `keyring`. `run_browser_flow` não tem teste automatizado.
 - YouTube Analytics: a combinação `day,creatorContentType` pode ser recusada pelo Google.
 - `AnthropicProvider` e `AnthropicCoach`: chamada real, incluindo `fallbacks`.
-- Busca de canais (`search_channels`), concorrentes e pesquisas no modo real: só com YouTube falso.
+- Busca de canais (`search_channels`), concorrentes, descoberta e pesquisas agendadas no modo real: só com API simulada.
 - Termos de descoberta (`insightTrafficSourceDetail` com `YT_SEARCH`): só com mock.
-- Coach com `claude_cli`: uma pergunta real, sobre dados fictícios.
+- Coach com `claude_cli`: uma pergunta real, sobre dados fictícios, anterior ao formato atual da resposta.
+- Títulos com Claude: só com provedor falso.
 
 ## Não implementado
 
@@ -40,7 +46,9 @@ Passou em testes com mocks e nunca falou com o serviço verdadeiro:
 | Regra de 08/12/2025 para artistas oficiais | Não implementada |
 | Classificação de Short por vídeo via Analytics | Só há totais por tipo |
 | Alertas por e-mail | Só há painel |
-| Provedor de volume de busca | Ponto de ligação pronto, sem provedor contratado |
+| Provedor de volume de busca | Ponto de ligação pronto, sem provedor contratado. Limitações em `docs/POLITICA_DE_DADOS.md` |
+| Tela de aceite da política de privacidade | Existe a página Dados e privacidade, sem aceite obrigatório |
+| Agendador iniciado sozinho | De propósito: só por botão ou pelo comando `research-tick` |
 | Geração automática de ideias todo dia | Só sob demanda |
 | Auditoria de canal própria | Só Analytics e perguntas ao Coach |
 | OCR, rostos e geração de thumbnail | Fora desta fase |
@@ -68,4 +76,5 @@ Passou em testes com mocks e nunca falou com o serviço verdadeiro:
 - **Tendências e relevância por palavras:** contagem de termos, sem semântica.
 - **Prioridade editorial por regras:** não mede potencial.
 - **Pesos do ranking:** escolhidos por julgamento, sem calibração.
-- **Atribuição:** o rodapé cita o YouTube em texto; o uso das marcas não foi implementado.
+- **Atribuição:** o rodapé e os links citam o YouTube em texto; os logotipos oficiais não foram implementados.
+- **Termos de busca de nicho:** vêm de uma lista escrita à mão, sem medição. Ao virar ideia, um termo como "espaço universo" ainda pode soar artificial.

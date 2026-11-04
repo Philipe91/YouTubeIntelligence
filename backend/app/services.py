@@ -513,6 +513,7 @@ def system_status(conn: sqlite3.Connection, settings: Settings) -> dict:
     }
     return {
         "mode": settings.mode,
+        "api_target": settings.api_target,
         "policy": {
             "state": state.state, "derived_allowed": state.derived_allowed, "stats_retention": state.stats_retention,
             "text_retention_days": state.text_retention_days, "description": state.description,

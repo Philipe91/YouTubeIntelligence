@@ -62,7 +62,7 @@ def test_answer_uses_concrete_items_from_the_real_search(db, studio, cfg, real):
     message = ask(db, studio, cfg, real["id"], "Qual assunto devo produzir para este canal?")
     content = message["content"]
     text = " ".join(item["text"] for item in content["observations"])
-    assert "Roma antiga parte 0" in text and "Canal Falso" in text and "50000 views públicas medidas em 2026-11-04" in text
+    assert "Roma antiga parte 0" in text and "Canal Falso" in text and "50000 views públicas medidas em 04/11/2026" in text
     assert any(source["url"] == "https://www.youtube.com/watch?v=vid00" for source in content["sources"].values())
     assert all(item["refs"] for item in content["observations"])
 
@@ -74,6 +74,15 @@ def test_recommendations_have_reason_and_source(db, studio, cfg, real):
     for item in content["recommendations"]:
         assert item["why"] and item["refs"] and all(ref in content["sources"] for ref in item["refs"])
     assert "Não é uma nota de qualidade" in content["recommendations"][0]["why"]
+
+
+def test_rule_answers_never_mention_a_model_and_always_explain(db, studio, cfg, real):
+    """Visto na tela: resposta por regras dizia que "o modelo" não explicou a escolha."""
+    search(db, studio, cfg, real["id"])
+    for question in ("Quais vídeos encontrei na pesquisa?", "Qual assunto devo produzir?", "Quais temas ainda não explorei?", "Que oportunidades existem?"):
+        content = ask(db, studio, cfg, real["id"], question)["content"]
+        for item in content["recommendations"]:
+            assert item["why"] and "modelo" not in item["why"].lower(), item
 
 
 def test_answer_declares_rules_and_data_used(db, studio, cfg, real):

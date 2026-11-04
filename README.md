@@ -44,16 +44,18 @@ Na página de cada canal: visão geral, recomendações, fila, calendário, hist
 | Tela | O que faz |
 |---|---|
 | **Hoje** (`/`) | Feed por canal: pendências, oportunidades, vídeos, tendências, títulos, ideias, coleta e limites |
+| **Descobrir oportunidades** | Nicho, subnicho, país, idioma, recência e formato, separando observado, estimado e hipótese. Salva vídeos, títulos, canais e temas por canal |
 | **Central de pesquisa** | Vídeos, canais, recentes e canais pequenos, com histórico, salvos, comparação e CSV |
+| **Pesquisas agendadas** | Repete pesquisas por canal, com limites. Com dados reais, fica desligado até você aprovar |
 | **Palavras-chave** | Análise do termo, relacionados, variações, perguntas, ascensão, favoritas e sugestões por canal |
 | **Outlier Explorer** | Vídeos por assunto, lista de estudo, notas e comparação de títulos |
 | **Ideias diárias** | Sugestões por canal, com salvar, rejeitar, favoritar e calendário |
-| **Coach** | Consultor por canal, com fontes, ferramentas usadas e custo. Por padrão, responde por regras, sem IA |
-| **Títulos e thumbnails** | Alternativas, análise de título e imagem, prévia e variações |
+| **Coach** | Consultor por canal, com itens concretos, justificativas, fontes e dados consultados. Por padrão, responde por regras, sem IA, e diz isso |
+| **Títulos e thumbnails** | Três ângulos com justificativa, análise de título e imagem, prévia e variações |
 
 Os concorrentes de cada canal ficam na página do canal, em **Concorrentes**.
 
-**Sem chave, tudo funciona com dados fictícios, sempre rotulados.** Com dados reais e sem aprovação do Google, as telas mostram dados crus e bloqueiam scores. O volume de busca aparece como indisponível, porque nenhuma API pública o informa. O modo real ainda não foi usado com a API de verdade. Veja `docs/INTELIGENCIA.md` e `docs/MATRIZ_VIDIQ.md`.
+**Sem chave, tudo funciona com dados fictícios, sempre rotulados.** Com dados reais e sem aprovação do Google, as telas mostram dados crus e bloqueiam scores. O volume de busca aparece como indisponível, porque nenhuma API pública o informa. **Nenhuma consulta com dados reais foi feita ainda, porque não há chave configurada.** O passo a passo está em `docs/CONFIGURAR_YOUTUBE_API.md`. Veja também `docs/INTELIGENCIA.md` e `docs/MATRIZ_VIDIQ.md`.
 
 ## Claude Code
 
@@ -80,9 +82,9 @@ cd ..\frontend
 npm run typecheck
 ```
 
-Os testes não acessam a rede: as APIs são simuladas.
+Os testes não acessam a rede: as APIs são simuladas. O único teste que fala com o Google é `scripts/validar_api_real.py`, e sem chave ele registra a validação como pendente.
 
-Veja `docs/TESTES.md`. Para os módulos de inteligência no navegador, use `scripts/teste_inteligencia.py`. Para o ciclo completo, com navegador, MCP real, queda e reinício, use uma pasta vazia fora de `data/` e o frontend já compilado:
+Veja `docs/TESTES.md`. Para os módulos de inteligência no navegador, use `scripts/teste_inteligencia.py` e `scripts/teste_dados_reais.py`. Para o ciclo completo, com navegador, MCP real, queda e reinício, use uma pasta vazia fora de `data/` e o frontend já compilado:
 
 ```powershell
 uv run --directory backend --with playwright python ../scripts/teste_ciclo_completo.py --dados C:\temp\ciclo --saida ../docs/evidencias
@@ -92,9 +94,12 @@ uv run --directory backend --with playwright python ../scripts/teste_ciclo_compl
 
 ### 1. Coleta de dados crus
 
+Siga `docs/CONFIGURAR_YOUTUBE_API.md`. Em resumo:
+
 1. No [Google Cloud Console](https://console.cloud.google.com/), crie um projeto, ative a **YouTube Data API v3** e crie uma chave de API.
-2. Copie `.env.example` para `.env` e preencha `YTI_MODE=live` e `YOUTUBE_API_KEY`.
+2. Copie `.env.example` para `.env` e preencha `YTI_MODE=live` e `YOUTUBE_API_KEY`. Nunca cole a chave em conversas ou commits.
 3. Reinicie a API. O banco passa a ser `data/live.sqlite`; o demo fica em `data/demo.sqlite`.
+4. Em **Sistema e cotas**, clique em **Testar conexão**.
 
 ```powershell
 cd backend
@@ -135,6 +140,8 @@ uv run python -m app.cli collect
 ```
 
 Cada tarefa respeita o próprio intervalo, então rodar com mais frequência não gasta mais cota. Como alternativa, deixe um terminal aberto com `uv run python -m app.cli scheduler`.
+
+As pesquisas agendadas são separadas e ficam desligadas até você aprovar os limites, na tela **Pesquisas agendadas**. Veja `docs/POLITICA_DE_DADOS.md`.
 
 ## Geração de ideias
 
@@ -183,6 +190,8 @@ claude mcp add --transport http vidiq https://mcp.vidiq.com/mcp
 - [Pipelines existentes](docs/PIPELINES.md)
 - [Relatório da versão multicanal](docs/RELATORIO_MULTICANAL.md)
 - [Contrato do agente](docs/CONTRATO_AGENTE.md)
+- [Configurar a YouTube Data API](docs/CONFIGURAR_YOUTUBE_API.md)
+- [Política de dados](docs/POLITICA_DE_DADOS.md)
 - [Conformidade](docs/CONFORMIDADE.md)
 - [Memória](docs/MEMORIA.md)
 - [Relatório de equivalência e auditoria](docs/RELATORIO_EQUIVALENCIA.md)

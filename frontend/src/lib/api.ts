@@ -187,6 +187,7 @@ export interface OwnChannel {
 
 export interface SystemStatus {
   mode: "demo" | "live";
+  api_target: "google" | "simulada";
   policy: { state: string; derived_allowed: boolean; stats_retention: string; text_retention_days: number; description: string; extended_storage: boolean; problems: string[]; record_status: string; legacy_env_ignored: boolean };
   credentials: { youtube_api_key: boolean; oauth_client: boolean; own_channels_authorized: number };
   ai: { provider: string; model: string | null };

@@ -2,6 +2,8 @@
 
 Releitura feita em 03/11/2026 das páginas oficiais. Este documento não é parecer jurídico. As páginas foram lidas por um resumidor automático com citações curtas: confira o texto original antes de decidir.
 
+A revalidação de 04/11/2026, com o uso de dados públicos, a retenção, o OAuth e os provedores de volume em seções separadas, está em `docs/POLITICA_DE_DADOS.md`.
+
 ## Correção ao relatório do MVP
 
 O MVP tratava a exceção de métricas derivadas como um aceite de formulário, liberado por uma variável de ambiente. **Isso estava fraco.** A seção III.L limita a exceção a desenvolvedores **auditados**, com uso analítico, **explicitamente aprovados** pelo pedido padrão de extensão de cota, e a III.D.5 liga a extensão de cota a uma API Compliance Audit. A página de métricas derivadas fala em aceitar a emenda e não descreve o processo de auditoria, então as duas páginas devem ser lidas juntas.

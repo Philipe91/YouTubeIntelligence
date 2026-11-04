@@ -35,6 +35,13 @@ async function ModeBanner() {
       </div>
     );
   }
+  if (status.api_target === "simulada") {
+    return (
+      <div className="bg-warn-soft px-6 py-2 text-sm text-warn">
+        API simulada de teste: nada aqui vem do YouTube. Serve só para testar o aplicativo.
+      </div>
+    );
+  }
   if (!status.policy.derived_allowed) {
     return (
       <div className="bg-bad-soft px-6 py-2 text-sm text-bad">

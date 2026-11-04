@@ -1,0 +1,102 @@
+{
+ "passos": [
+  {
+   "passo": "sem chave: pendente, com passos, e o modo demonstração segue funcionando"
+  },
+  {
+   "passo": "descoberta: observado, estimado e hipóteses separados, com dados fictícios rotulados"
+  },
+  {
+   "passo": "salvar vídeo, título e tema por canal; tema vira ideia; vídeo pede o assunto em palavras suas"
+  },
+  {
+   "passo": "salvos: isolados por canal"
+  },
+  {
+   "passo": "agendador em demo: roda sobre dados fictícios e registra o histórico, sem pedir aprovação"
+  },
+  {
+   "passo": "títulos: o defeito sumiu; três ângulos naturais, com justificativa e sem promessa"
+  },
+  {
+   "passo": "ideias: assuntos naturais e justificativa em cada título"
+  },
+  {
+   "passo": "coach: diz que é por regras, com justificativas, fontes e dados consultados"
+  },
+  {
+   "passo": "dados e privacidade: links exigidos pela política"
+  },
+  {
+   "passo": "celular sem estouro horizontal",
+   "rotas": 8
+  },
+  {
+   "passo": "modo real sem chave: a pesquisa explica o que falta, sem inventar resultado"
+  },
+  {
+   "passo": "modo real sem chave: agendador desligado e sem botão de aprovar"
+  },
+  {
+   "passo": "teste de conexão simulado: nunca conta como validação real"
+  },
+  {
+   "passo": "teste com busca: mostra cada etapa e o formato recebido"
+  },
+  {
+   "passo": "descoberta no modo real: link, título, canal, data e números públicos, sem score",
+   "resultados": 12
+  },
+  {
+   "passo": "repetir a mesma descoberta usa o cache e não gasta busca"
+  },
+  {
+   "passo": "filtro de Shorts: aplicado depois da API, com classificação e aviso"
+  },
+  {
+   "passo": "canais pequenos e itens salvos associados ao canal real"
+  },
+  {
+   "passo": "central de pesquisa: busca pela API e salvamento",
+   "run": "run_1374869986954989"
+  },
+  {
+   "passo": "palavras-chave: amostra real, índice bloqueado e volume indisponível"
+  },
+  {
+   "passo": "outlier explorer: só os indicadores autorizados"
+  },
+  {
+   "passo": "monitoramento de concorrentes: adiciona por @nome, sem comparações"
+  },
+  {
+   "passo": "agendador real: desligado até aprovar; agendar não chama a API"
+  },
+  {
+   "passo": "agendador real: com os limites aprovados, roda e registra o histórico"
+  },
+  {
+   "passo": "coach: cita itens concretos da pesquisa, sem score"
+  },
+  {
+   "passo": "erro de chave, com o corpo real do Google: mensagem clara e chave nunca na tela"
+  },
+  {
+   "passo": "falha de rede: mensagem clara, depois de novas tentativas"
+  },
+  {
+   "passo": "teste de conexão: API desligada no projeto, com o que fazer"
+  },
+  {
+   "passo": "cota esgotada: para de chamar até a virada do dia de cota"
+  },
+  {
+   "passo": "celular sem estouro horizontal",
+   "rotas": 6
+  }
+ ],
+ "cenarios": {},
+ "aviso": "Validação com API simulada e dados fictícios. Não prova que a API do Google responde assim.",
+ "chamadas_api_simulada": 21,
+ "erros_de_pagina": []
+}

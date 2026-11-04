@@ -240,7 +240,7 @@ def tick(conn: sqlite3.Connection, studio: sqlite3.Connection, settings: Setting
         api_calls = created["provenance"].get("api_calls", 0)
         used_search = bool(created["provenance"].get("search_api_calls"))
         status = "ok_api" if used_search else "ok_cache"
-        _event(conn, row["id"], now, status, created["id"], f"{created['result_count']} resultados. {api_calls} chamadas novas.")
+        _event(conn, row["id"], now, status, created["id"], f"{created['result_count']} {'resultado' if created['result_count'] == 1 else 'resultados'}. {api_calls} {'chamada nova' if api_calls == 1 else 'chamadas novas'}.")
         conn.execute("UPDATE research_schedules SET next_run_at = ?, last_run_at = ?, last_status = ?, last_error = NULL, consecutive_errors = 0, updated_at = ? WHERE id = ?", (next_run, to_iso(now), status, to_iso(now), row["id"]))
         conn.commit()
         if used_search:
