@@ -4,17 +4,19 @@ from __future__ import annotations
 import sqlite3
 from collections.abc import Iterator
 
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, Query, Request, Response
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from .. import demo
 from ..config import Settings
 from ..db import connect, migrate, utcnow
 from ..deps import settings_dep
+from ..metrics.text import normalize
 from ..policy import policy_state
 from ..studio.router import studio_conn
-from ..studio.store import get_channel, list_channels
-from . import coach, competitors, explorer, ideas, keywords, research
+from ..studio.store import StudioError, get_channel, list_channels
+from . import coach, competitors, explorer, ideas, keywords, lab, research
 from .common import ClientFactory, compatible, default_client
 
 router = APIRouter(prefix="/api/intel")
@@ -384,3 +386,82 @@ def coach_rename(channel_id: str, conversation_id: str, body: RenameBody, conn=D
 def coach_delete(channel_id: str, conversation_id: str, conn=Depends(research_db)):
     coach.delete_conversation(conn, channel_id, conversation_id)
     return {"deleted": conversation_id}
+
+
+# --- Title & Thumbnail Lab ------------------------------------------------------------------------
+
+class EvaluateBody(BaseModel):
+    title: str
+    subject: str = ""
+
+
+@router.post("/lab/evaluate")
+def lab_evaluate(body: EvaluateBody):
+    return lab.evaluate_title(body.title, body.subject)
+
+
+class ProjectBody(BaseModel):
+    subject: str
+    recommendation_id: str | None = None
+
+
+@router.get("/channels/{channel_id}/lab/projects")
+def lab_projects(channel_id: str, limit: int = PageLimit, offset: int = PageOffset, studio=Depends(studio_conn)):
+    return lab.list_projects(studio, channel_id, limit, offset)
+
+
+@router.post("/channels/{channel_id}/lab/projects", status_code=201)
+def lab_create(channel_id: str, body: ProjectBody, studio=Depends(studio_conn)):
+    return lab.create_project(studio, channel_id, body.subject, body.recommendation_id, utcnow())
+
+
+@router.get("/channels/{channel_id}/lab/projects/{project_id}")
+def lab_project(channel_id: str, project_id: str, conn=Depends(research_db), studio=Depends(studio_conn)):
+    forbidden = {normalize(row["title"]) for row in conn.execute("SELECT title FROM videos")}
+    return lab.get_project(studio, channel_id, project_id, forbidden)
+
+
+@router.post("/channels/{channel_id}/lab/projects/{project_id}/delete")
+def lab_delete_project(channel_id: str, project_id: str, studio=Depends(studio_conn), settings=Depends(settings_dep)):
+    lab.delete_project(studio, settings, channel_id, project_id)
+    return {"deleted": project_id}
+
+
+class VariationBody(BaseModel):
+    title: str
+    note: str = ""
+
+
+@router.post("/channels/{channel_id}/lab/projects/{project_id}/variations", status_code=201)
+def lab_add_variation(channel_id: str, project_id: str, body: VariationBody, studio=Depends(studio_conn)):
+    return lab.add_variation(studio, channel_id, project_id, body.title, body.note, utcnow())
+
+
+class VariationPatch(BaseModel):
+    note: str | None = None
+    favorite: bool | None = None
+
+
+@router.post("/channels/{channel_id}/lab/variations/{variation_id}/update")
+def lab_update_variation(channel_id: str, variation_id: str, body: VariationPatch, studio=Depends(studio_conn)):
+    return lab.update_variation(studio, channel_id, variation_id, note=body.note, favorite=body.favorite, now=utcnow())
+
+
+@router.post("/channels/{channel_id}/lab/variations/{variation_id}/delete")
+def lab_delete_variation(channel_id: str, variation_id: str, studio=Depends(studio_conn), settings=Depends(settings_dep)):
+    lab.delete_variation(studio, settings, channel_id, variation_id)
+    return {"deleted": variation_id}
+
+
+@router.post("/channels/{channel_id}/lab/variations/{variation_id}/image")
+async def lab_image(channel_id: str, variation_id: str, request: Request, studio=Depends(studio_conn), settings=Depends(settings_dep)):
+    """Corpo com os bytes da imagem. O tamanho declarado é conferido antes de ler, e o lido, depois."""
+    declared = request.headers.get("content-length", "")
+    if declared.isdigit() and int(declared) > lab.MAX_IMAGE_BYTES:
+        raise StudioError("image_too_large", "A imagem passa de 5 MB.", 413)
+    return lab.attach_image(studio, settings, channel_id, variation_id, await request.body(), utcnow())
+
+
+@router.get("/channels/{channel_id}/lab/images/{file_name}")
+def lab_image_file(channel_id: str, file_name: str, studio=Depends(studio_conn), settings=Depends(settings_dep)):
+    return FileResponse(lab.image_path(studio, settings, channel_id, file_name), media_type="image/jpeg", headers={"X-Content-Type-Options": "nosniff"})

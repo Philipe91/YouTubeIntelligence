@@ -375,6 +375,72 @@ def demo_ideas_coach(page: Page, saida: Path) -> None:
     passo("coach: renomear e apagar conversa")
 
 
+def imagens_teste(pasta: Path) -> tuple[Path, Path, Path]:
+    from PIL import Image, ImageDraw
+
+    pasta.mkdir(parents=True, exist_ok=True)
+    boa = Image.new("RGB", (1280, 720), (15, 20, 40))
+    ImageDraw.Draw(boa).rectangle((880, 240, 1180, 480), fill=(255, 210, 0))
+    boa.save(pasta / "boa.png")
+    Image.new("RGB", (1280, 720), (128, 128, 128)).save(pasta / "lisa.jpg")
+    (pasta / "falsa.png").write_text("isto não é uma imagem", encoding="utf-8")
+    return pasta / "boa.png", pasta / "lisa.jpg", pasta / "falsa.png"
+
+
+def demo_lab(page: Page, saida: Path, dados: Path) -> None:
+    boa, lisa, falsa = imagens_teste(dados.parent / "imagens_teste")
+    page.goto(f"{WEB}/lab?canal={CANAL}")
+    page.get_by_label("Assunto do vídeo").fill("Queda de Cartago")
+    page.get_by_role("button", name="Criar projeto").click()
+    page.wait_for_url(re.compile(r"projeto=lab_"))
+    expect(page.get_by_text("não prevê CTR", exact=False).first).to_be_visible()
+    assert page.get_by_text("Previsão de CTR").count() == 0
+    passo("lab: projeto criado, nota sem promessa de CTR")
+
+    page.get_by_role("button", name="Guardar título").first.click()
+    expect(page.get_by_role("heading", name="Variações salvas (1)")).to_be_visible()
+    page.get_by_label("Seu título").fill("A QUEDA DE CARTAGO!!! você não vai acreditar")
+    page.get_by_label("Thumbnail (opcional)").set_input_files(str(falsa))
+    page.get_by_role("button", name="Salvar variação").click()
+    expect(page.get_by_role("alert").filter(has_text="a imagem foi recusada")).to_be_visible()
+    expect(page.get_by_role("heading", name="Variações salvas (2)")).to_be_visible()
+    expect(page.get_by_text("Expressão exagerada", exact=False).first).to_be_visible()
+    passo("lab: títulos avaliados; arquivo falso recusado com erro claro")
+
+    page.get_by_label("Seu título").fill("O dia em que Cartago caiu")
+    page.get_by_label("Thumbnail (opcional)").set_input_files(str(boa))
+    page.get_by_role("button", name="Salvar variação").click()
+    expect(page.get_by_role("heading", name="Variações salvas (3)")).to_be_visible()
+    imagem = page.locator("img[src*='/lab/imagem/']").first
+    expect(imagem).to_be_visible()
+    largura = imagem.evaluate("element => element.naturalWidth")
+    assert largura > 0, "a imagem salva não carregou"
+    expect(page.get_by_text("Hierarquia e composição").first).to_be_visible()
+    expect(page.get_by_text("Não lê texto na imagem.").first).to_be_visible()
+    tela(page, saida, "34_lab.png")
+    passo("lab: imagem real analisada e exibida na prévia", largura=largura)
+
+    primeira_sem_imagem = page.get_by_label("Trocar ou enviar thumbnail").first
+    primeira_sem_imagem.set_input_files(str(lisa))
+    page.get_by_role("button", name="Enviar imagem").first.click()
+    expect(page.locator("img[src*='/lab/imagem/']")).to_have_count(2)
+    page.get_by_role("button", name="Favoritar").first.click()
+    expect(page.get_by_text("Favorita", exact=True).first).to_be_visible()
+    page.get_by_label("Sua nota").first.fill("Melhor para o público atual")
+    page.get_by_role("button", name="Salvar nota").first.click()
+    expect(page.get_by_text("Nota salva.")).to_be_visible()
+    passo("lab: segunda imagem, favorita e nota")
+
+    url = page.url
+    page.goto(url.replace(CANAL, OUTRO))
+    expect(page.get_by_text("Projeto não encontrado neste canal.")).to_be_visible()
+    page.goto(url)
+    antes = page.get_by_role("button", name="Apagar variação").count()
+    page.get_by_role("button", name="Apagar variação").last.click()
+    expect(page.get_by_role("button", name="Apagar variação")).to_have_count(antes - 1)
+    passo("lab: isolamento entre canais e apagar variação")
+
+
 def cenario_demo(browser, dados: Path, saida: Path) -> None:
     with App(dados, "demo"):
         context = browser.new_context(viewport={"width": 1366, "height": 900}, accept_downloads=True)
@@ -384,11 +450,12 @@ def cenario_demo(browser, dados: Path, saida: Path) -> None:
         demo_explorer(page, saida)
         demo_competitors(page, saida)
         demo_ideas_coach(page, saida)
+        demo_lab(page, saida, dados)
         competidor = page.request.get(f"http://127.0.0.1:{API_PORT}/api/intel/channels/{CANAL}/competitors").json()["items"][0]["id"]
         context.close()
         rotas_moveis(browser, ["/", "/pesquisa", f"/pesquisa/{run}", "/pesquisa?aba=historico", "/palavras", "/palavras?termo=roma", f"/palavras?aba=para-voce&canal={CANAL}",
                                f"/explorer?canal={CANAL}", f"/explorer?aba=estudo&canal={CANAL}", f"/canais/{CANAL}/concorrentes", f"/canais/{CANAL}/concorrentes/{competidor}",
-                               f"/ideias?canal={CANAL}", f"/coach?canal={CANAL}"])
+                               f"/ideias?canal={CANAL}", f"/coach?canal={CANAL}", f"/lab?canal={CANAL}"])
 
 
 # --- Cenário restrito -----------------------------------------------------------------------------

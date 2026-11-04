@@ -106,6 +106,13 @@ export interface CoachList {
 }
 export interface CoachConversation { conversation: { id: string; title: string; created_at: string; updated_at: string }; messages: CoachMessage[] }
 
+export interface LabCriterion { key: string; label: string; score: number; explanation: string }
+export interface TitleEval { title: string; characters: number; words: number; criteria: LabCriterion[]; warnings: string[]; review_score: number; note: string }
+export interface ImageEval { width: number; height: number; format: string; bytes: number; criteria: LabCriterion[]; warnings: string[]; review_score: number; limits: string[]; note: string }
+export interface LabVariation { id: string; project_id: string; title: string; title_eval: TitleEval; image_file: string | null; image_eval: ImageEval | null; note: string; favorite: boolean; created_at: string }
+export interface LabProject { project: { id: string; channel_id: string; subject: string; recommendation_id: string | null; created_at: string }; channel_name: string; variations: LabVariation[]; suggestions: TitleEval[]; note: string }
+export interface LabProjects { total: number; limit: number; offset: number; items: { id: string; subject: string; updated_at: string; variations: number }[] }
+
 export async function intelGet<T>(path: string, params?: Record<string, string | undefined>): Promise<T> {
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(params ?? {})) if (value) query.set(key, value);
@@ -134,6 +141,19 @@ export async function intelWrite(path: string, body?: unknown): Promise<WriteRes
   try {
     const response = await fetch(`${API_URL}/api/intel${path}`, {
       method: "POST", cache: "no-store", headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify(body ?? {}),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (response.ok) return { ok: true, data };
+    return { ok: false, error: data?.error?.message ?? `A API retornou HTTP ${response.status}.` };
+  } catch {
+    return { ok: false, error: "A API local não respondeu. Confira se o backend está rodando." };
+  }
+}
+
+export async function intelUpload(path: string, file: File): Promise<WriteResult> {
+  try {
+    const response = await fetch(`${API_URL}/api/intel${path}`, {
+      method: "POST", cache: "no-store", headers: { "Content-Type": "application/octet-stream", ...authHeaders() }, body: Buffer.from(await file.arrayBuffer()),
     });
     const data = await response.json().catch(() => ({}));
     if (response.ok) return { ok: true, data };

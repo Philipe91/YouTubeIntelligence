@@ -13,6 +13,7 @@ dependencies = [
   "keyring>=25.0",
   "anthropic>=1.0",
   "mcp>=2,<3",
+  "pillow>=10",
 ]
 
 [dependency-groups]

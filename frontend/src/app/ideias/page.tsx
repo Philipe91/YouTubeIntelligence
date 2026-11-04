@@ -68,7 +68,8 @@ function IdeaCard({ idea, today }: { idea: Idea; today: string }) {
             <label className="text-[0.8125rem] text-ink-2">Data no calendário<input type="date" name="scheduled_on" required min={today} defaultValue={idea.scheduled_on ?? ""} className="field mt-1 block" /></label>
           </ActionForm>
         )}
-        <Link className="ml-auto text-sm text-cobalt underline underline-offset-2" href={`/canais/${idea.channel_id}?aba=recomendacoes`}>Abrir no canal</Link>
+        <Link className="ml-auto text-sm text-cobalt underline underline-offset-2" href={`/lab?canal=${idea.channel_id}&assunto=${encodeURIComponent(idea.subject)}&ideia=${idea.id}`}>Abrir no laboratório</Link>
+        <Link className="text-sm text-cobalt underline underline-offset-2" href={`/canais/${idea.channel_id}?aba=recomendacoes`}>Abrir no canal</Link>
       </div>
       {idea.facts_to_verify.length > 0 && <p className="mt-2 text-[0.8125rem] text-ink-3">Antes de produzir: {idea.facts_to_verify.join(" ")}</p>}
     </article>

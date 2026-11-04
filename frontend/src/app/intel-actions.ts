@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import type { ActionState } from "@/app/canais/actions";
-import { intelWrite } from "@/lib/intel";
+import { intelUpload, intelWrite } from "@/lib/intel";
 import type { WriteResult } from "@/lib/studio";
 
 const seg = encodeURIComponent;
@@ -169,4 +169,51 @@ export async function deleteConversation(previous: ActionState, data: FormData):
   if (!result.ok) return { error: result.error, done: previous.done };
   revalidatePath("/coach");
   redirect(`/coach?canal=${seg(channel)}`);
+}
+
+// --- Laboratório -------------------------------------------------------------------------------
+
+export async function createLabProject(previous: ActionState, data: FormData): Promise<ActionState> {
+  const channel = text(data, "channel_id");
+  const result = await intelWrite(`/channels/${seg(channel)}/lab/projects`, { subject: text(data, "subject"), recommendation_id: text(data, "recommendation_id") || null });
+  if (!result.ok) return { error: result.error, done: previous.done };
+  revalidatePath("/lab");
+  redirect(`/lab?canal=${seg(channel)}&projeto=${seg(String(result.data.id))}`);
+}
+
+export async function addLabVariation(previous: ActionState, data: FormData): Promise<ActionState> {
+  const channel = text(data, "channel_id");
+  const result = await intelWrite(`/channels/${seg(channel)}/lab/projects/${seg(text(data, "project_id"))}/variations`, { title: text(data, "title"), note: text(data, "note") });
+  if (!result.ok) return { error: result.error, done: previous.done };
+  const file = data.get("image");
+  if (file instanceof File && file.size > 0) {
+    const upload = await intelUpload(`/channels/${seg(channel)}/lab/variations/${seg(String(result.data.id))}/image`, file);
+    revalidatePath("/lab");
+    if (!upload.ok) return { error: `Título salvo, mas a imagem foi recusada: ${upload.error}`, done: previous.done };
+  }
+  return done(previous, result, "/lab");
+}
+
+export async function attachLabImage(previous: ActionState, data: FormData): Promise<ActionState> {
+  const file = data.get("image");
+  if (!(file instanceof File) || file.size === 0) return { error: "Escolha uma imagem.", done: previous.done };
+  return done(previous, await intelUpload(`/channels/${seg(text(data, "channel_id"))}/lab/variations/${seg(text(data, "variation_id"))}/image`, file), "/lab");
+}
+
+export async function updateLabVariation(previous: ActionState, data: FormData): Promise<ActionState> {
+  const favorite = text(data, "favorite");
+  const body = favorite ? { favorite: favorite === "1" } : { note: text(data, "note") };
+  return done(previous, await intelWrite(`/channels/${seg(text(data, "channel_id"))}/lab/variations/${seg(text(data, "variation_id"))}/update`, body), "/lab");
+}
+
+export async function deleteLabVariation(previous: ActionState, data: FormData): Promise<ActionState> {
+  return done(previous, await intelWrite(`/channels/${seg(text(data, "channel_id"))}/lab/variations/${seg(text(data, "variation_id"))}/delete`), "/lab");
+}
+
+export async function deleteLabProject(previous: ActionState, data: FormData): Promise<ActionState> {
+  const channel = text(data, "channel_id");
+  const result = await intelWrite(`/channels/${seg(channel)}/lab/projects/${seg(text(data, "project_id"))}/delete`);
+  if (!result.ok) return { error: result.error, done: previous.done };
+  revalidatePath("/lab");
+  redirect(`/lab?canal=${seg(channel)}`);
 }

@@ -13,6 +13,7 @@ const GROUPS = [
       { href: "/explorer", label: "Outlier Explorer" },
       { href: "/ideias", label: "Ideias diárias" },
       { href: "/coach", label: "Coach" },
+      { href: "/lab", label: "Títulos e thumbnails" },
       { href: "/oportunidades", label: "Oportunidades" },
       { href: "/videos", label: "Vídeos" },
       { href: "/tendencias", label: "Tendências" },
