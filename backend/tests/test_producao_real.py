@@ -57,6 +57,7 @@ class FakeExecutor:
     def __init__(self, worker_dir: Path, vid: str, frames: int = 400, fail_on: str | None = None, qa=None):
         self.dir, self.vid, self.frames, self.fail_on, self.qa_result = worker_dir, vid, frames, fail_on, qa if qa is not None else []
         self.calls: list[tuple[str, list[str], Path]] = []
+        self.engine = "x " + bq_worker.ENGINE_PATCHES[0][2] + " y"
 
     def run(self, operation, argv, cwd, env=None, tick=None):
         self.calls.append((operation, list(argv), Path(cwd)))
@@ -69,7 +70,8 @@ class FakeExecutor:
         if operation == "git_archive":
             import tarfile
 
-            (self.dir / "src_tmp" / "anim" / "src").mkdir(parents=True, exist_ok=True)
+            (self.dir / "src_tmp" / "anim" / "src" / "v44").mkdir(parents=True, exist_ok=True)
+            (self.dir / "src_tmp" / "anim" / "src" / "v44" / "mundo44.js").write_text(self.engine, encoding="utf-8")
             (self.dir / "src_tmp" / "anim" / "studio.html").write_text("x")
             (self.dir / "src_tmp" / "anim" / "node_modules").mkdir(exist_ok=True)
             with tarfile.open(self.dir / "base.tar", "w") as archive:
@@ -321,6 +323,32 @@ def test_qa_warnings_are_logged_without_stopping(db, settings, contract):
     assert "Revisão geométrica: 1 avisos" in " ".join(e["message"] for e in contract.get_job(job["id"])["events"])
 
 
+def test_engine_patch_only_touches_the_job_copy(db, settings, contract):
+    channel, job, token, worker, executor = run_worker(db, settings, contract)
+    assert worker.run() == 0
+    patched = (worker.anim / "src" / "v44" / "mundo44.js").read_text(encoding="utf-8")
+    assert bq_worker.ENGINE_PATCHES[0][3] in patched
+    assert worker.anim.resolve().is_relative_to(job_dir(settings, job["id"]))
+
+
+def test_engine_patch_stops_when_code_differs(db, settings, contract):
+    channel, job, token, worker, executor = run_worker(db, settings, contract)
+    executor.engine = "outro codigo"
+    assert worker.run() == 2
+    state = contract.get_job(job["id"])
+    assert "não se aplica" in state["job"]["last_error"]
+    assert "frames" not in [c[0] for c in executor.calls]
+
+
+def test_mix_keeps_music_under_voice_and_never_cuts_video(db, settings, contract):
+    channel, job, token, worker, executor = run_worker(db, settings, contract)
+    assert worker.run() == 0
+    mix = next(c for c in executor.calls if c[0] == "mix")[1]
+    graph = mix[mix.index("-filter_complex") + 1]
+    assert f"volume={bq_worker.MUSIC_VOLUME:.2f}" in graph and "aloop" in graph and "atrim=0:12.83" in graph
+    assert "-shortest" not in next(c for c in executor.calls if c[0] == "mux")[1]
+
+
 def test_word_time_ignores_punctuation_and_case():
     cena = {"inicio": 2.0, "palavras": [{"w": "Then", "t": 0.1, "d": 0.2}, {"w": "mud", "t": 0.5, "d": 0.2}]}
     assert bq_worker.word_time(cena, "mud.") == 2.5 and bq_worker.word_time(cena, "THEN,") == 2.1
@@ -422,6 +450,21 @@ def test_review_is_human_only_and_never_publishes(db, settings, contract):
         production.review(channel["id"], job["id"], "publicar", "")
     code = (BACKEND_DIR / "app" / "studio" / "mcp_server.py").read_text(encoding="utf-8")
     assert "def review" not in code
+
+
+def test_asking_changes_allows_a_new_real_job_from_the_same_briefing(db, settings, contract):
+    channel, job, token, worker, executor = run_worker(db, settings, contract)
+    worker.run()
+    row = contract._job(job["id"])
+    artifact = contract.get_job(job["id"])["artifacts"][0]["id"]
+    contract.prepare_publish_package(job["id"], "T", "D", [], artifact, "p1")
+    with pytest.raises(StudioError) as closed:
+        contract.dispatch_briefing(channel["id"], row["briefing_id"], "d2", real=True)
+    assert closed.value.code == "recommendation_unavailable"
+    Production(contract).review(channel["id"], job["id"], "ajustes", "Refazer")
+    again = contract.dispatch_briefing(channel["id"], row["briefing_id"], "d3", real=True)["job"]
+    assert again["id"] != job["id"] and again["simulated"] is False and again["state"] == "authorized"
+    assert contract._job(job["id"])["state"] == "package_ready", "a versão anterior continua registrada"
 
 
 def test_channel_profile_plan_shows_real_adapter():

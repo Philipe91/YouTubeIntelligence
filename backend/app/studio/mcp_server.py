@@ -108,6 +108,7 @@ def submit_script(job_id: str, lease_token: str, script: dict, idempotency_key: 
     """Tarefa real: envia o roteiro original. script = {resumo, cenas, fontes [{label, url}], fatos_a_conferir}.
     Cada cena: texto em inglês; m = mundo (set trincheira: quem chegada, escreve, escreve2, powell, remoi, remoi2, frente, bombardeio,
     ordem, fim; set campo: quem silencio), quill (acao), numero (valor, rotulo), documento (titulo, linhas, carimbo) ou relogio (hora, vira, em).
+    A trincheira sempre tem chuva; remoi e remoi2 são à noite. Campo é de dia, sem chuva. Os soldados usam capacete Brodie, de 1915 em diante.
     Opcionais: fx [[palavra do texto, efeito]], placa {txt, sub, em}, snap, drama, enquadre=largo. Até 6 cenas e 45 palavras."""
     return _call(lambda c: Production(c).submit_script(job_id, lease_token, script, idempotency_key, agent_id))
 

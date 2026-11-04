@@ -129,6 +129,9 @@ class Production:
             raise StudioError("job_not_ready", "A tarefa ainda não está pronta para revisão.", 409)
         stamp = to_iso(utcnow())
         self.contract._set_job(job_id, review_status=decision, review_note=note.strip()[:1000], reviewed_at=stamp)
+        if decision == "ajustes" and job["recommendation_id"]:
+            # Reabre a ideia: o dono pode autorizar outra tarefa a partir do mesmo briefing.
+            self.conn.execute("UPDATE recommendations SET status = 'aceita', updated_at = ? WHERE id = ? AND status = 'concluida'", (stamp, job["recommendation_id"]))
         self.contract._event(job_id, "info", "state", f"Revisão do dono: {decision}. Nada foi publicado.")
         self.conn.commit()
         return {"review_status": decision, "published": False}

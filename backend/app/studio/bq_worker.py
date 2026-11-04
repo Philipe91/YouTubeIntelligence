@@ -47,6 +47,14 @@ STAGES = (
 ENDS = {"preparar": 4, "narracao": 12, "timeline": 14, "qa": 24, "frames": 84, "encode": 90, "mix": 95, "validar": 98, "entregar": 100}
 
 
+# Correções aplicadas só na cópia da tarefa. O projeto original não muda: cabe ao dono levá-las para lá.
+# Se o texto não existir na cópia, a produção para em vez de seguir com outro código.
+ENGINE_PATCHES = (
+    ("src/v44/mundo44.js", "Céu sem cobrir o topo em cenas externas: o papel aparecia como uma faixa clara.",
+     "Math.max(4, hz / 10) + 8 + (i === 9 ? H * 3 : 0)", "Math.max(4, hz / 10) + 8 + (i === 9 ? H * 3 : 0) + (i === 0 ? H * 3 + Math.abs(hz) : 0)"),
+)
+MUSIC_VOLUME = 0.08  # cerca de 10 dB abaixo da narração do Edge-TTS, medida no primeiro vídeo real
+
 # Efeitos do catálogo para os sons disponíveis em sons_dir.
 FX_SOUNDS = {"tambor": "drum", "sino": "ding", "pop": "pop", "ding": "ding", "whoosh": "whoosh", "carimbo": "thud", "erro": "thud", "explosao": "boom", "boing": "pop"}
 
@@ -181,12 +189,18 @@ class BQWorker:
         with tarfile.open(tar_path) as archive:
             archive.extractall(self.dir / "ws", filter="data")
         tar_path.unlink()
+        for relative, _, old, new in ENGINE_PATCHES:
+            target = _inside(self.anim, self.anim / relative)
+            source = target.read_bytes().decode("utf-8")
+            if source.count(old) != 1:
+                raise StudioError("engine_patch_failed", f"A correção de {relative} não se aplica a este commit.", 409)
+            target.write_bytes(source.replace(old, new).encode("utf-8"))
         modules = self.anim / "node_modules"
         if not modules.exists():
             import _winapi
 
             _winapi.CreateJunction(str(Path(self.config["node_modules"]).resolve()), str(modules))
-        return f"Commit {commit} extraído na pasta da tarefa. Projeto original não tocado."
+        return f"Commit {commit} extraído na pasta da tarefa, com {len(ENGINE_PATCHES)} correção na cópia. Projeto original não tocado."
 
     def narracao(self, script: dict) -> str:
         roteiro = {"id": self.vid, "base": self.vid, "voz": self.config["voz"], "lang": "en", "rate": "+0%", "pausa": 0.12, "formato": "short", "apertar": True,
@@ -253,16 +267,17 @@ class BQWorker:
         timeline = json.loads((self.dir / "public" / self.vid / "timeline.json").read_text(encoding="utf-8"))
         public = self.dir / "public"
         sons = Path(self.config["sons_dir"])
-        duration = timeline["total"] + 0.8
+        duration = math.ceil((timeline["total"] + 0.8) * 24) / 24  # igual à duração dos quadros
         inputs: list[str] = []
         filters: list[str] = []
 
-        def add(path: Path, start: float, volume: float) -> None:
+        def add(path: Path, start: float, volume: float, loop: bool = False) -> None:
             index = len(inputs) // 2
             inputs.extend(["-i", str(path)])
-            filters.append(f"[{index}:a]aresample=44100,aformat=channel_layouts=stereo,volume={volume:.2f},adelay={int(start * 1000)}:all=1[a{index}]")
+            repeat = "aloop=loop=-1:size=2147483647," if loop else ""
+            filters.append(f"[{index}:a]{repeat}aresample=44100,aformat=channel_layouts=stereo,volume={volume:.2f},adelay={int(start * 1000)}:all=1[a{index}]")
 
-        add(sons / "trilha.wav", 0, 0.28)
+        add(sons / "trilha.wav", 0, MUSIC_VOLUME, loop=True)
         for cena in timeline["cenas"]:
             add(_inside(public, public / cena["audio"]), float(cena["inicio"]), 1.0)
         for cena in timeline["cenas"][1:]:
@@ -277,7 +292,7 @@ class BQWorker:
         wav = self.dir / "audio.wav"
         self._run("mix", ["ffmpeg", "-v", "error", "-y", *inputs, "-filter_complex", ";".join(filters), "-map", "[out]", "-ar", "44100", str(wav)], self.dir)
         final = self.dir / "final.mp4"
-        self._run("mux", ["ffmpeg", "-v", "error", "-y", "-i", str(self.dir / "mudo.mp4"), "-i", str(wav), "-map", "0:v", "-map", "1:a", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-shortest", str(final)], self.dir)
+        self._run("mux", ["ffmpeg", "-v", "error", "-y", "-i", str(self.dir / "mudo.mp4"), "-i", str(wav), "-map", "0:v", "-map", "1:a", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", str(final)], self.dir)
         return f"{final.stat().st_size} bytes com narração, trilha e transições."
 
     def validar(self) -> str:

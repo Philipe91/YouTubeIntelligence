@@ -234,7 +234,7 @@ def ciclo(pagina, dados: Path, telas: Path) -> None:
     # 5. Disponibilizar
     agente_sem_tarefa = AgenteMcp(dados)
     assert agente_sem_tarefa.ok("list_available_tasks", agent_id="agente-teste-A", channel_id=CANAL)["tasks"] == []
-    clicar(pagina, "Disponibilizar ao Claude Code")
+    clicar(pagina, "Disponibilizar simulação")
     expect(pagina.get_by_text("Disponível: aguardando um agente")).to_be_visible()
     agente = agente_sem_tarefa
     tarefas = agente.ok("list_available_tasks", agent_id="agente-teste-A", channel_id=CANAL)["tasks"]
