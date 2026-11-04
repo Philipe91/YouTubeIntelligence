@@ -148,6 +148,10 @@ class Contract:
         """Pasta exclusiva da tarefa para arquivos de teste, dentro da pasta de dados."""
         return (Path(self.settings.data_dir) / "artefatos_teste" / job_id).resolve()
 
+    def _production_dir(self, job_id: str) -> Path:
+        """Pasta exclusiva da produção real da tarefa."""
+        return (Path(self.settings.data_dir) / "producao" / job_id).resolve()
+
     def recover_stale(self) -> list[str]:
         """Devolve à fila tarefas cujo agente sumiu. Pode rodar a qualquer momento."""
         self.conn.commit()
@@ -282,8 +286,8 @@ class Contract:
 
         return self._idempotent("start_production", idempotency_key, payload, action)
 
-    def dispatch_briefing(self, channel_id: str, briefing_id: str, idempotency_key: str, dispatched_by: str = "dono_local") -> dict:
-        """Ação humana: o briefing aprovado vira tarefa disponível ao agente. Só simulada nesta versão."""
+    def dispatch_briefing(self, channel_id: str, briefing_id: str, idempotency_key: str, dispatched_by: str = "dono_local", real: bool = False) -> dict:
+        """Ação humana: o briefing aprovado vira tarefa disponível ao agente. Real só com adaptador permitido."""
         channel = get_channel(self.conn, channel_id)
         if channel["automation"]["auto_production"] == "off":
             raise StudioError("automation_off", "A produção está desligada neste canal.", 403)
@@ -292,12 +296,16 @@ class Contract:
             row = self.conn.execute("SELECT * FROM briefings WHERE id = ? AND channel_id = ?", (briefing_id, channel_id)).fetchone()
             if row is None:
                 raise StudioError("briefing_not_in_channel", "O briefing não pertence a este canal.", 404)
-            job_id = self._create_job(channel_id, row["recommendation_id"], dispatched_by, True, dispatched_by,
+            if real:
+                from .production import real_dispatch_check  # production importa este módulo
+
+                real_dispatch_check(self, channel_id, json.loads(row["payload_json"])["duration_seconds"])
+            job_id = self._create_job(channel_id, row["recommendation_id"], dispatched_by, not real, dispatched_by,
                                       title=row["chosen_title"], briefing_id=briefing_id)
             self._event(job_id, "info", "state", "Disponível ao Claude Code. Aguardando um agente assumir.")
             return {"job": _public_job(self._job(job_id))}
 
-        return self._idempotent("dispatch_briefing", idempotency_key, {"channel": channel_id, "briefing": briefing_id}, action)
+        return self._idempotent("dispatch_briefing", idempotency_key, {"channel": channel_id, "briefing": briefing_id, "real": bool(real)}, action)
 
     def list_available_tasks(self, channel_id: str | None = None, agent_id: str | None = None) -> dict:
         """Tarefas autorizadas e livres para assumir."""
@@ -402,12 +410,13 @@ class Contract:
         else:
             if path.startswith(SIMULATED_PREFIX):
                 raise StudioError("invalid_artifact", "Tarefa real não aceita arquivo simulado.", 422)
-            roots = [Path(root).resolve() for root in self.settings.artifact_roots]
-            if not roots:
-                raise StudioError("artifact_root_not_configured", "Defina YTI_ARTIFACT_ROOTS antes de entregar arquivos reais.", 409)
             resolved = Path(path).resolve()
-            if not any(resolved.is_relative_to(root) for root in roots):
-                raise StudioError("artifact_outside_root", "O arquivo está fora das pastas permitidas em YTI_ARTIFACT_ROOTS.", 403)
+            if not resolved.is_relative_to(self._production_dir(job["id"])):
+                roots = [Path(root).resolve() for root in self.settings.artifact_roots]
+                if not roots:
+                    raise StudioError("artifact_root_not_configured", "Defina YTI_ARTIFACT_ROOTS antes de entregar arquivos reais.", 409)
+                if not any(resolved.is_relative_to(root) for root in roots):
+                    raise StudioError("artifact_outside_root", "O arquivo está fora das pastas permitidas em YTI_ARTIFACT_ROOTS.", 403)
         if not resolved.is_file():
             raise StudioError("artifact_missing", f"Arquivo não encontrado: {resolved.name}.", 422)
         return kind, str(resolved), label, resolved.stat().st_size, _sha256(resolved)
@@ -421,7 +430,7 @@ class Contract:
         if row["path"].startswith(SIMULATED_PREFIX):
             raise StudioError("artifact_virtual", "Item simulado: este arquivo não existe no disco.", 404)
         resolved = Path(row["path"]).resolve()
-        allowed = [self._sandbox(job["id"])] if job["simulated"] else [Path(root).resolve() for root in self.settings.artifact_roots]
+        allowed = [self._sandbox(job["id"])] if job["simulated"] else [self._production_dir(job["id"]), *(Path(root).resolve() for root in self.settings.artifact_roots)]
         if not any(resolved.is_relative_to(root) for root in allowed):
             raise StudioError("artifact_outside_root", "O arquivo está fora das pastas permitidas.", 403)
         if not resolved.is_file():
@@ -502,6 +511,10 @@ class Contract:
                 raise StudioError("automation_off", "O pacote automático está desligado neste canal.", 403)
             if job["state"] != "delivered":
                 raise StudioError("job_not_delivered", f"A tarefa está em '{job['state']}'. Entregue os arquivos primeiro.", 409)
+            if not job["simulated"]:
+                check = self.conn.execute("SELECT ok FROM job_validation WHERE job_id = ?", (job_id,)).fetchone()
+                if check is None or not check["ok"]:
+                    raise StudioError("video_not_validated", "O vídeo real precisa passar por validate_video antes do pacote.", 409)
             for artifact_id in filter(None, (video_artifact_id, thumbnail_artifact_id)):
                 if not self.conn.execute("SELECT 1 FROM job_artifacts WHERE id = ? AND job_id = ?", (artifact_id, job_id)).fetchone():
                     raise StudioError("artifact_not_in_job", "O arquivo não pertence a esta tarefa.", 404)
@@ -542,7 +555,18 @@ class Contract:
         artifacts = [dict(r) for r in self.conn.execute("SELECT * FROM job_artifacts WHERE job_id = ? ORDER BY created_at, id", (job_id,))]
         attempts = [dict(r) for r in self.conn.execute("SELECT number, agent_id, started_at, ended_at, outcome, error FROM job_attempts WHERE job_id = ? ORDER BY number", (job_id,))]
         return {"job": job, "events": events, "artifacts": artifacts, "attempt_history": attempts,
-                "briefing": self._briefing_payload(job.get("briefing_id")), "package": self.package_view(job_id), "notice": DATA_NOTICE}
+                "briefing": self._briefing_payload(job.get("briefing_id")), "package": self.package_view(job_id), "notice": DATA_NOTICE,
+                **self.production_view(job_id)}
+
+    def production_view(self, job_id: str) -> dict:
+        script = self.conn.execute("SELECT payload_json, submitted_by, submitted_at FROM job_scripts WHERE job_id = ?", (job_id,)).fetchone()
+        stages = [dict(r) for r in self.conn.execute("SELECT stage, label, status, detail, done, total, started_at, ended_at FROM job_stages WHERE job_id = ? ORDER BY position", (job_id,))]
+        check = self.conn.execute("SELECT ok, report_json, validated_by, validated_at FROM job_validation WHERE job_id = ?", (job_id,)).fetchone()
+        return {
+            "script": {**json.loads(script["payload_json"]), "submitted_by": script["submitted_by"], "submitted_at": script["submitted_at"]} if script else None,
+            "stages": stages,
+            "validation": {**json.loads(check["report_json"]), "validated_by": check["validated_by"], "validated_at": check["validated_at"]} if check else None,
+        }
 
     def channel_cockpit(self, channel_id: str) -> dict:
         """Tudo que a página do canal mostra sobre execução. Limitado a este canal."""
@@ -563,8 +587,9 @@ class Contract:
             """SELECT e.id, e.job_id, j.title AS job_title, e.at, e.level, e.message FROM job_events e
                JOIN production_jobs j ON j.id = e.job_id
                WHERE j.channel_id = ? AND e.level IN ('warning','error') AND e.acknowledged_at IS NULL ORDER BY e.id DESC LIMIT 20""", (channel_id,))]
-        return {"current_job": current, "attempts": attempts, "artifacts": artifacts, "alerts": alerts,
-                "jobs_total": len(rows)}
+        return {"current_job": current, "attempts": attempts, "artifacts": artifacts, "alerts": alerts, "jobs_total": len(rows),
+                "production": self.production_view(current["id"]) if current else None,
+                "current_briefing": self._briefing_payload(current.get("briefing_id")) if current else None}
 
     def acknowledge_alert(self, channel_id: str, event_id: int) -> dict:
         cursor = self.conn.execute(

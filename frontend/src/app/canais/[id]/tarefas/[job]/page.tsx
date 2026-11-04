@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { AutoRefresh } from "@/components/AutoRefresh";
+import { ProductionPanel } from "@/components/production";
 import { AttemptsTable, FileLink, JobActions, JobStatePill, ProgressBar } from "@/components/studio";
 import { PageHeader, Panel, Pill, SectionTitle } from "@/components/ui";
 import { dateTime } from "@/lib/format";
@@ -39,6 +40,7 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
             {job.last_error && <p className="mt-3 rounded-md bg-bad-soft px-2.5 py-1.5 text-sm text-bad">{job.last_error}</p>}
             <div className="mt-3"><JobActions job={job} /></div>
           </Panel>
+          {!job.simulated && <ProductionPanel channelId={id} job={job} production={data} briefing={briefing} artifacts={artifacts} />}
           <Panel className="p-4">
             <SectionTitle>Histórico de execuções</SectionTitle>
             <div className="mt-2"><AttemptsTable attempts={attempts} /></div>

@@ -1,3 +1,4 @@
+import { ProductionPanel } from "@/components/production";
 import Link from "next/link";
 
 import { ActionForm } from "@/components/ActionForm";
@@ -115,8 +116,11 @@ function NextVideo({ channel, cockpit }: { channel: ChannelDetail; cockpit: Cock
             <div><dt className="text-ink-3">Estrutura</dt><dd>{briefing.payload.outline.map((s) => `${s.section} (${s.target_seconds} s)`).join(", ")}</dd></div>
           </dl>
           <div className="mt-3">
-            <ActionForm action={dispatchBriefing} submit="Disponibilizar ao Claude Code" pending="Enviando..." hidden={{ channel_id: channel.id, briefing_id: briefing.id, form_key: `ui:${briefing.id}:${briefing.updated_at}` }} />
-            <p className="mt-1.5 text-[0.8125rem] text-ink-3">Cria uma tarefa simulada, já autorizada por você. Nada é publicado.</p>
+            <div className="flex flex-wrap items-start gap-2">
+              {cockpit.real_adapter && <ActionForm action={dispatchBriefing} submit="Autorizar produção real" pending="Autorizando..." hidden={{ channel_id: channel.id, briefing_id: briefing.id, real: "1", form_key: `ui:real:${briefing.id}:${briefing.updated_at}` }} />}
+              <ActionForm action={dispatchBriefing} tone={cockpit.real_adapter ? "quiet" : "primary"} submit="Disponibilizar simulação" pending="Enviando..." hidden={{ channel_id: channel.id, briefing_id: briefing.id, form_key: `ui:${briefing.id}:${briefing.updated_at}` }} />
+            </div>
+            <p className="mt-1.5 text-[0.8125rem] text-ink-3">{cockpit.real_adapter ? "A produção real usa o computador por vários minutos e gera um vídeo de verdade. Nada é publicado." : "Cria uma tarefa simulada, já autorizada por você. Nada é publicado."}</p>
           </div>
         </div>
       )}
@@ -161,6 +165,10 @@ export function ChannelCockpit({ channel, cockpit }: { channel: ChannelDetail; c
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.4fr_1fr]">
       <div className="min-w-0 space-y-4">
         <NextVideo channel={channel} cockpit={cockpit} />
+        {cockpit.current_job && !cockpit.current_job.simulated && cockpit.production && (
+          <ProductionPanel channelId={channel.id} job={cockpit.current_job} production={cockpit.production} briefing={cockpit.current_briefing}
+            artifacts={cockpit.artifacts.filter((artifact) => artifact.job_id === cockpit.current_job!.id)} />
+        )}
         <Panel className="p-5">
           <SectionTitle>Histórico de execuções</SectionTitle>
           <div className="mt-2"><AttemptsTable attempts={cockpit.attempts} showTitle /></div>

@@ -28,7 +28,15 @@ export interface Job {
   title: string; format: string; simulated: boolean; state: string; progress: number; step: string; attempts: number;
   max_attempts: number; lease_owner: string | null; lease_expires_at: string | null; requested_by: string;
   authorized_by: string | null; authorized_at: string | null; last_error: string | null; created_at: string; updated_at: string;
-  briefing_id: string | null; state_label: string;
+  briefing_id: string | null; state_label: string; review_status: string | null; review_note: string | null; reviewed_at: string | null;
+}
+
+export interface Stage { stage: string; label: string; status: "pendente" | "em_andamento" | "concluida" | "falhou"; detail: string; done: number | null; total: number | null; started_at: string | null; ended_at: string | null }
+export interface ScriptScene { texto: string; m: string; set?: string; quem?: string; acao?: string; titulo?: string; valor?: string; hora?: string }
+export interface ProductionView {
+  script: { resumo: string; cenas: ScriptScene[]; fontes: { label: string; url?: string }[]; fatos_a_conferir?: string[]; submitted_by: string; submitted_at: string } | null;
+  stages: Stage[];
+  validation: { ok: boolean; problems: string[]; width: number | null; height: number | null; duration_seconds: number; video_codec: string | null; audio_codec: string | null; size_bytes: number; validated_by: string; validated_at: string } | null;
 }
 
 export interface Attempt { job_id?: string; title?: string; number: number; agent_id: string; started_at: string; ended_at: string | null; outcome: string; error: string | null }
@@ -48,6 +56,7 @@ export interface Alert { id: number; job_id: string; job_title: string; at: stri
 export interface Cockpit {
   current_job: Job | null; attempts: Attempt[]; artifacts: CockpitArtifact[]; alerts: Alert[]; jobs_total: number;
   next_recommendation: Recommendation | null; briefing: Briefing | null; upcoming: CalendarEntry[];
+  production: ProductionView | null; current_briefing: BriefingPayload | null; real_adapter: string | null;
 }
 
 export interface PipelineStage { stage: string; label: string; adapter: string; can_execute: boolean; simulated: boolean; project: string | null; project_found: boolean | null; command_preview: string | null; heavy: boolean; requires: string[]; notes: string | null; blocked_reason: string | null }
@@ -79,7 +88,7 @@ export interface Recommendation {
   editorial_priority: string; facts_to_verify: string[]; data_basis: string; origin: string; status: string; created_at: string; updated_at: string;
 }
 
-export interface JobDetail {
+export interface JobDetail extends ProductionView {
   job: Job;
   events: { at: string; level: string; kind: string; message: string }[];
   artifacts: { id: string; kind: string; path: string; label: string; size_bytes: number | null; sha256: string | null; simulated: number }[];

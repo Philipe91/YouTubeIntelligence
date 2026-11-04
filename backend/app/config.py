@@ -28,6 +28,11 @@ def load_quota(path: Path = DEFAULT_QUOTA_PATH) -> dict[str, Any]:
         return tomllib.load(handle)
 
 
+def load_execution(path: Path = BACKEND_DIR / "config" / "execucao.toml") -> dict[str, Any]:
+    with path.open("rb") as handle:
+        return tomllib.load(handle)
+
+
 @dataclass(frozen=True)
 class ComplianceRecord:
     """Declaração do operador. O aplicativo não consegue confirmá-la com o Google."""
@@ -80,6 +85,7 @@ class Settings:
     api_token: str = ""  # Vazio recusa toda ação protegida: falha fechada.
     scoring: dict[str, Any] = field(default_factory=load_scoring)
     quota: dict[str, Any] = field(default_factory=load_quota)
+    execution: dict[str, Any] = field(default_factory=load_execution)
     compliance: ComplianceRecord = field(default_factory=load_compliance)
 
     @property

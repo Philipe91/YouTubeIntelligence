@@ -112,7 +112,30 @@ class UndefinedAdapter:
         raise StudioError("pipeline_stage_undefined", "Esta etapa não tem pipeline definido.", 409)
 
 
-ADAPTERS = {"simulado": lambda _: SimulatedAdapter(), "comando": DescribedCommandAdapter, "indefinido": UndefinedAdapter}
+class WorkerAdapter:
+    """Etapa atendida por um worker real, listado em execucao.toml. Quem executa é o worker, não este módulo."""
+
+    def __init__(self, config: dict[str, Any]):
+        self.config = config
+
+    def plan(self, request: StageRequest) -> StagePlan:
+        return StagePlan(stage=request.stage, adapter=self.config["adapter"], can_execute=True, simulated=False, project=self.config.get("project"),
+                         project_found=Path(self.config["project"]).expanduser().exists() if self.config.get("project") else None,
+                         command_preview=self.config.get("command"), output=self.config.get("output"), heavy=bool(self.config.get("heavy")),
+                         requires=tuple(self.config.get("requires", ())), notes=self.config.get("notes"))
+
+    def run(self, request: StageRequest) -> StageResult:
+        raise StudioError("use_worker", "Esta etapa é executada pelo worker, com start_production_run.", 409)
+
+
+ADAPTERS = {"simulado": lambda _: SimulatedAdapter(), "comando": DescribedCommandAdapter, "indefinido": UndefinedAdapter, "brother_quill_v1": WorkerAdapter}
+
+
+def real_adapter_for(profile: str) -> str | None:
+    """Nome do adaptador real do perfil, se houver."""
+    stages = load_profiles().get(profile, {}).get("stages", {})
+    names = {config["adapter"] for config in stages.values()} - {"simulado", "comando", "indefinido"}
+    return next(iter(names)) if len(names) == 1 else None
 
 
 @lru_cache(maxsize=1)
@@ -140,8 +163,9 @@ def plan_for(profile: str, job_id: str, channel_id: str, briefing: dict[str, Any
     for key, label, _ in STAGES:
         request = StageRequest(job_id, channel_id, key, briefing or {})
         stages.append({**asdict(adapter_for(profile, key).plan(request)), "label": label})
+    required = [stage for stage in stages if stage["stage"] not in load_profiles()[profile].get("optional", [])]
     return {
         "profile": profile, "label": load_profiles()[profile]["label"], "stages": stages,
-        "ready_to_execute": all(stage["can_execute"] for stage in stages),
-        "real_execution_enabled": False,
+        "ready_to_execute": all(stage["can_execute"] for stage in required),
+        "real_execution_enabled": real_adapter_for(profile) is not None,
     }

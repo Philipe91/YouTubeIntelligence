@@ -18,6 +18,7 @@ from ..config import get_settings
 from ..logging_safe import install_redaction, redact
 from .contract import CONTRACT_VERSION, DEFAULT_LEASE_SECONDS, Contract
 from .pipelines import plan_for
+from .production import Production
 from .store import StudioError, get_channel, open_studio, seed_demo_once
 
 logging.basicConfig(stream=sys.stderr, level=logging.WARNING)
@@ -86,7 +87,7 @@ def list_available_tasks(agent_id: str, channel_id: str | None = None) -> dict:
 
 @server.tool()
 def get_pipeline_plan(job_id: str) -> dict:
-    """Quais adaptadores atenderiam cada etapa da tarefa. Só descreve: pipelines reais não são executados."""
+    """Quais adaptadores atendem cada etapa da tarefa. Tarefa real só executa pelo adaptador permitido, com start_production_run."""
 
     def operation(contract: Contract) -> dict:
         job = contract._job(job_id)
@@ -100,6 +101,28 @@ def get_pipeline_plan(job_id: str) -> dict:
 def write_test_result(job_id: str, lease_token: str, content: str, idempotency_key: str) -> dict:
     """Só em tarefa simulada: grava um arquivo de texto de teste na pasta da tarefa e devolve o caminho para deliver_artifacts."""
     return _call(lambda c: c.write_test_result(job_id, lease_token, content, idempotency_key))
+
+
+@server.tool()
+def submit_script(job_id: str, lease_token: str, script: dict, idempotency_key: str, agent_id: str) -> dict:
+    """Tarefa real: envia o roteiro original. script = {resumo, cenas, fontes [{label, url}], fatos_a_conferir}.
+    Cada cena: texto em inglês; m = mundo (set trincheira: quem chegada, escreve, escreve2, powell, remoi, remoi2, frente, bombardeio,
+    ordem, fim; set campo: quem silencio), quill (acao), numero (valor, rotulo), documento (titulo, linhas, carimbo) ou relogio (hora, vira, em).
+    Opcionais: fx [[palavra do texto, efeito]], placa {txt, sub, em}, snap, drama, enquadre=largo. Até 6 cenas e 45 palavras."""
+    return _call(lambda c: Production(c).submit_script(job_id, lease_token, script, idempotency_key, agent_id))
+
+
+@server.tool()
+def start_production_run(job_id: str, lease_token: str, idempotency_key: str) -> dict:
+    """Tarefa real com roteiro enviado: inicia o worker em processo próprio e devolve na hora.
+    O worker cuida da tarefa até a entrega. Acompanhe com get_job, campo stages. Recusa com memória baixa."""
+    return _call(lambda c: Production(c).start_run(job_id, lease_token, idempotency_key))
+
+
+@server.tool()
+def validate_video(job_id: str, agent_id: str) -> dict:
+    """Tarefa real entregue: confere o arquivo final no disco (codecs, resolução, duração, áudio) e devolve o relatório. Exigido antes do pacote."""
+    return _call(lambda c: Production(c).validate_video(job_id, agent_id))
 
 
 @server.tool()
@@ -135,7 +158,7 @@ def update_progress(job_id: str, lease_token: str, progress: int, step: str, ide
 @server.tool()
 def deliver_artifacts(job_id: str, lease_token: str, artifacts: list[dict], idempotency_key: str) -> dict:
     """Entrega arquivos [{kind, path, label}]. kind: video, short, thumbnail, script, audio, other.
-    Tarefa simulada usa simulado:// ou o caminho de write_test_result. Tarefa real exige arquivo dentro de YTI_ARTIFACT_ROOTS."""
+    Tarefa simulada usa simulado:// ou o caminho de write_test_result. Tarefa real exige arquivo na pasta da tarefa ou em YTI_ARTIFACT_ROOTS."""
     return _call(lambda c: c.deliver_artifacts(job_id, lease_token, artifacts, idempotency_key))
 
 

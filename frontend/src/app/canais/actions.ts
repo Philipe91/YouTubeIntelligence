@@ -161,7 +161,12 @@ export async function approveBriefing(previous: ActionState, data: FormData): Pr
 
 export async function dispatchBriefing(previous: ActionState, data: FormData): Promise<ActionState> {
   const id = text(data, "channel_id");
-  return finish(previous, await studioWrite("POST", `/channels/${seg(id)}/briefings/${seg(text(data, "briefing_id"))}/dispatch`, { idempotency_key: text(data, "form_key") }), id);
+  return finish(previous, await studioWrite("POST", `/channels/${seg(id)}/briefings/${seg(text(data, "briefing_id"))}/dispatch`, { idempotency_key: text(data, "form_key"), real: text(data, "real") === "1" }), id);
+}
+
+export async function reviewJob(previous: ActionState, data: FormData): Promise<ActionState> {
+  const id = text(data, "channel_id");
+  return finish(previous, await studioWrite("POST", `/channels/${seg(id)}/jobs/${seg(text(data, "job_id"))}/review`, { decision: text(data, "decision"), note: text(data, "note") }), id);
 }
 
 export async function acknowledgeAlert(previous: ActionState, data: FormData): Promise<ActionState> {

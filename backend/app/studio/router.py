@@ -18,6 +18,7 @@ from ..deps import settings_dep
 from ..policy import policy_state
 from . import pipelines, recommend, simulator, status, store
 from .contract import Contract
+from .production import Production
 
 router = APIRouter(prefix="/api/studio")
 
@@ -257,17 +258,30 @@ def approve_briefing(channel_id: str, recommendation_id: str, body: BriefingBody
 
 class DispatchBody(BaseModel):
     idempotency_key: str
+    real: bool = False
 
 
 @router.post("/channels/{channel_id}/briefings/{briefing_id}/dispatch", status_code=201)
 def dispatch(channel_id: str, briefing_id: str, body: DispatchBody, conn=Depends(studio_conn), settings=Depends(_settings)):
-    return Contract(conn, settings).dispatch_briefing(channel_id, briefing_id, body.idempotency_key)
+    return Contract(conn, settings).dispatch_briefing(channel_id, briefing_id, body.idempotency_key, real=body.real)
+
+
+class ReviewBody(BaseModel):
+    decision: str
+    note: str = ""
+
+
+@router.post("/channels/{channel_id}/jobs/{job_id}/review")
+def review(channel_id: str, job_id: str, body: ReviewBody, conn=Depends(studio_conn), settings=Depends(_settings)):
+    return Production(Contract(conn, settings)).review(channel_id, job_id, body.decision, body.note)
 
 
 @router.get("/channels/{channel_id}/cockpit")
 def cockpit(channel_id: str, conn=Depends(studio_conn), settings=Depends(_settings)):
     contract = Contract(conn, settings)
     data = contract.channel_cockpit(channel_id)
+    adapter = pipelines.real_adapter_for(store.get_channel(conn, channel_id)["pipeline_profile"])
+    data["real_adapter"] = adapter if settings.execution["real_execution_enabled"] and adapter in settings.execution["allowed_adapters"] else None
     today = date.today()
     open_items = store.list_recommendations(conn, channel_id, "aceita") + store.list_recommendations(conn, channel_id, "nova")
     upcoming = store.list_calendar(conn, channel_id, today.isoformat(), (today + timedelta(days=60)).isoformat())
@@ -288,7 +302,8 @@ def acknowledge(channel_id: str, event_id: int, conn=Depends(studio_conn), setti
 @router.get("/channels/{channel_id}/pipeline")
 def pipeline(channel_id: str, conn=Depends(studio_conn)):
     channel = store.get_channel(conn, channel_id)
-    return {"plan": pipelines.plan_for(channel["pipeline_profile"], "", channel_id), "options": pipelines.profile_options()}
+    return {"plan": pipelines.plan_for(channel["pipeline_profile"], "", channel_id), "options": pipelines.profile_options(),
+            "real_adapter": pipelines.real_adapter_for(channel["pipeline_profile"])}
 
 
 @router.get("/channels/{channel_id}/jobs/{job_id}/artifacts/{artifact_id}")

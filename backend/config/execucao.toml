@@ -1,0 +1,18 @@
+# Execução real de pipelines. Só o que estiver listado aqui pode rodar.
+# Nenhum comando vem de texto externo, roteiro ou pesquisa: os comandos são montados no código.
+
+real_execution_enabled = true
+allowed_adapters = ["brother_quill_v1"]
+max_video_seconds = 20        # teste supervisionado; aumente só depois de validar vídeos curtos
+min_free_ram_gb_to_start = 2.0
+min_free_ram_gb_running = 0.6 # abaixo disso a execução para e pode ser retomada
+
+[brother_quill_v1]
+repo = 'D:\projetos\BROTHER QUILL'
+commit = "8638afc"            # versão estável fixada; nada é executado na pasta original
+node_modules = 'D:\projetos\BROTHER QUILL\anim\node_modules'
+tts_python = "python"
+tts_script = 'D:\ViralReplicator_motion\remotion\tts.py'
+voz = "en-US-AndrewNeural"    # Edge-TTS. A voz do canal (vs:quill) exige o VoiceStudio ligado
+sons_dir = 'D:\ViralReplicator_motion\remotion\public\sq'
+operations = ["git_archive", "narrar", "qa", "frames", "encode", "mix", "mux", "ffprobe", "folha"]

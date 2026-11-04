@@ -1,0 +1,19 @@
+# Vocabulário de cenas aceito do roteiro. Vem do motor do Brother Quill no commit fixado.
+# O agente escolhe entre estes valores: não existe campo livre que vire código.
+
+[mundo.trincheira]
+quem = ["chegada", "escreve", "escreve2", "powell", "remoi", "remoi2", "frente", "bombardeio", "ordem", "fim"]
+
+[mundo.campo]
+quem = ["silencio"]
+
+[graficos]
+modos = ["quill", "numero", "documento", "relogio"]
+quill_acao = ["escreve", "abre_livro", "duvida", "facepalm", "aponta", "riso"]
+
+[som]
+fx = ["tambor", "sino", "pop", "ding", "whoosh", "carimbo", "erro", "explosao", "boing"]
+
+[limites]
+max_cenas = 6
+max_palavras = 45

@@ -20,36 +20,30 @@ adapter = "simulado"
 
 [profiles.brother_quill]
 label = "Brother Quill (animação própria)"
+optional = ["thumbnail"]
 
 [profiles.brother_quill.stages.roteiro]
-adapter = "comando"
-project = 'D:\projetos\BROTHER QUILL\roteiros'
-command = "python -I gen_<id>.py"
-output = "roteiros/<id>.json"
-notes = "Cada vídeo tem um gerador próprio escrito à mão. Falta um gerador a partir do briefing."
+adapter = "brother_quill_v1"
+notes = "O agente envia cenas validadas contra config/bq_catalogo.toml com submit_script."
 
 [profiles.brother_quill.stages.narracao]
-adapter = "comando"
+adapter = "brother_quill_v1"
 project = 'D:\ViralReplicator_motion\remotion'
-command = "python tts.py <id>"
-output = "public/<id>/timeline.json"
-requires = ["VoiceStudio ligado: D:\\VoiceStudio\\app\\resources\\backend\\main.py"]
-notes = "Argumentos a confirmar lendo tts.py."
+command = "tts.py, sem alterar o script, gravando na pasta da tarefa"
+notes = "Usa Edge-TTS. A voz do canal, vs:quill, exige o VoiceStudio ligado e ainda não é usada."
 
 [profiles.brother_quill.stages.animacao]
-adapter = "comando"
-project = 'D:\projetos\BROTHER QUILL\anim'
-command = "bash qa/rodada.sh <id> <id>_short"
-output = "anim/out/qa/"
-notes = "QA geométrico e folhas de contato, obrigatórios antes de renderizar. Revisor visual em qa/REVISOR.md."
+adapter = "brother_quill_v1"
+project = 'D:\projetos\BROTHER QUILL'
+command = "render.mjs --qa, na cópia do commit fixado"
+notes = "Só a revisão geométrica é automática. O revisor visual segue sendo humano ou agente."
 
 [profiles.brother_quill.stages.renderizacao]
-adapter = "comando"
-project = 'D:\projetos\BROTHER QUILL\anim'
-command = "node render.mjs --frames --fps=24 --workers=1"
-output = "anim/out/"
+adapter = "brother_quill_v1"
+project = 'D:\projetos\BROTHER QUILL'
+command = "render.mjs --frames --fps=24 --workers=1, depois --encode e ffmpeg"
 heavy = true
-notes = "Produção pesada. Mais de 1 worker estoura a RAM. Depois: mix_longo.py e ffmpeg."
+notes = "Pesado. Um worker só. Para com memória baixa e retoma aproveitando os quadros."
 
 [profiles.brother_quill.stages.thumbnail]
 adapter = "indefinido"
