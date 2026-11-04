@@ -17,7 +17,8 @@ from mcp.server.mcpserver import MCPServer
 from ..config import get_settings
 from ..logging_safe import install_redaction, redact
 from .contract import CONTRACT_VERSION, DEFAULT_LEASE_SECONDS, Contract
-from .store import StudioError, open_studio, seed_demo_once
+from .pipelines import plan_for
+from .store import StudioError, get_channel, open_studio, seed_demo_once
 
 logging.basicConfig(stream=sys.stderr, level=logging.WARNING)
 install_redaction()
@@ -78,6 +79,30 @@ def get_next_briefing(channel_id: str, agent_id: str) -> dict:
 
 
 @server.tool()
+def list_available_tasks(agent_id: str, channel_id: str | None = None) -> dict:
+    """Tarefas autorizadas e livres para assumir com claim_job. Opcionalmente, de um canal."""
+    return _call(lambda c: c.list_available_tasks(channel_id, agent_id))
+
+
+@server.tool()
+def get_pipeline_plan(job_id: str) -> dict:
+    """Quais adaptadores atenderiam cada etapa da tarefa. Só descreve: pipelines reais não são executados."""
+
+    def operation(contract: Contract) -> dict:
+        job = contract._job(job_id)
+        channel = get_channel(contract.conn, job["channel_id"])
+        return plan_for("simulado" if job["simulated"] else channel["pipeline_profile"], job_id, job["channel_id"])
+
+    return _call(operation)
+
+
+@server.tool()
+def write_test_result(job_id: str, lease_token: str, content: str, idempotency_key: str) -> dict:
+    """Só em tarefa simulada: grava um arquivo de texto de teste na pasta da tarefa e devolve o caminho para deliver_artifacts."""
+    return _call(lambda c: c.write_test_result(job_id, lease_token, content, idempotency_key))
+
+
+@server.tool()
 def start_production(channel_id: str, recommendation_id: str, idempotency_key: str, agent_id: str, simulated: bool = True) -> dict:
     """Pede uma tarefa de produção. Tarefa real sempre fica aguardando autorização do dono na interface."""
     return _call(lambda c: c.start_production(channel_id, recommendation_id, idempotency_key, agent_id, simulated))
@@ -110,7 +135,7 @@ def update_progress(job_id: str, lease_token: str, progress: int, step: str, ide
 @server.tool()
 def deliver_artifacts(job_id: str, lease_token: str, artifacts: list[dict], idempotency_key: str) -> dict:
     """Entrega arquivos [{kind, path, label}]. kind: video, short, thumbnail, script, audio, other.
-    Tarefa simulada usa caminhos simulado://. Tarefa real exige arquivo dentro de YTI_ARTIFACT_ROOTS."""
+    Tarefa simulada usa simulado:// ou o caminho de write_test_result. Tarefa real exige arquivo dentro de YTI_ARTIFACT_ROOTS."""
     return _call(lambda c: c.deliver_artifacts(job_id, lease_token, artifacts, idempotency_key))
 
 

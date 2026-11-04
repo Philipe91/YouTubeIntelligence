@@ -1,13 +1,15 @@
 # Liga a API e a interface sem wrappers (uv, npm), para gastar menos memória e não deixar processos órfãos.
 # Uso: powershell -ExecutionPolicy Bypass -File scripts\iniciar.ps1
 # Requer ter rodado uma vez: uv sync (backend), npm install e npm run build (frontend).
+# O servidor MCP não é ligado aqui: o Claude Code o inicia e o encerra quando precisa.
 param([int]$ApiPort = 8000, [int]$WebPort = 3000)
 
 $root = Split-Path -Parent $PSScriptRoot
 $python = Join-Path $root 'backend\.venv\Scripts\python.exe'
 $next = Join-Path $root 'frontend\node_modules\next\dist\bin\next'
-$pids = Join-Path $root 'data\processos.txt'
-New-Item -ItemType Directory -Force (Join-Path $root 'data') | Out-Null
+$dados = if ($env:YTI_DATA_DIR) { $env:YTI_DATA_DIR } else { Join-Path $root 'data' }
+$pids = Join-Path $dados 'processos.txt'
+New-Item -ItemType Directory -Force $dados | Out-Null
 
 foreach ($port in $ApiPort, $WebPort) {
   if (Get-NetTCPConnection -State Listen -LocalPort $port -ErrorAction SilentlyContinue) {

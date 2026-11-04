@@ -1,4 +1,4 @@
-const API_URL = process.env.YTI_API_URL ?? "http://127.0.0.1:8000";
+export const API_URL = process.env.YTI_API_URL ?? "http://127.0.0.1:8000";
 
 export interface Automation { auto_research: string; auto_briefing: string; auto_production: string; auto_package: string; publishing: string }
 export interface AuthStatus { state: string; label: string; detail: string; checked_at?: string }
@@ -9,7 +9,7 @@ export interface Channel {
   niche: string; language: string; country: string; audience: string; positioning: string; tone: string;
   keywords: string[]; avoid: string[]; topic_backlog: string[]; formats: string[];
   long_target_seconds: number; short_target_seconds: number; cadence_per_week: number | null;
-  automation: Automation; created_at: string; updated_at: string;
+  automation: Automation; pipeline_profile: string; created_at: string; updated_at: string;
 }
 
 export interface ChannelSummary extends Channel {
@@ -28,7 +28,30 @@ export interface Job {
   title: string; format: string; simulated: boolean; state: string; progress: number; step: string; attempts: number;
   max_attempts: number; lease_owner: string | null; lease_expires_at: string | null; requested_by: string;
   authorized_by: string | null; authorized_at: string | null; last_error: string | null; created_at: string; updated_at: string;
+  briefing_id: string | null; state_label: string;
 }
+
+export interface Attempt { job_id?: string; title?: string; number: number; agent_id: string; started_at: string; ended_at: string | null; outcome: string; error: string | null }
+
+export interface BriefingPayload {
+  chosen_title: string; subject: string; justification: string; hook: string; thumbnail_idea: string; format: string; duration_seconds: number;
+  target_audience: string; language: string; tone: string; outline: { section: string; target_seconds: number }[];
+  facts_to_verify: string[]; fictional: boolean; constraints: string[];
+}
+
+export interface Briefing { id: string; chosen_title: string; approved_by: string; approved_at: string; updated_at: string; payload: BriefingPayload }
+
+export interface CockpitArtifact { id: string; job_id: string; job_title: string; kind: string; label: string; path: string; size_bytes: number | null; sha256: string | null; simulated: number; downloadable: boolean; created_at: string }
+
+export interface Alert { id: number; job_id: string; job_title: string; at: string; level: string; message: string }
+
+export interface Cockpit {
+  current_job: Job | null; attempts: Attempt[]; artifacts: CockpitArtifact[]; alerts: Alert[]; jobs_total: number;
+  next_recommendation: Recommendation | null; briefing: Briefing | null; upcoming: CalendarEntry[];
+}
+
+export interface PipelineStage { stage: string; label: string; adapter: string; can_execute: boolean; simulated: boolean; project: string | null; project_found: boolean | null; command_preview: string | null; heavy: boolean; requires: string[]; notes: string | null; blocked_reason: string | null }
+export interface PipelineInfo { plan: { profile: string; label: string; stages: PipelineStage[]; ready_to_execute: boolean; real_execution_enabled: boolean }; options: { id: string; label: string }[] }
 
 export interface CalendarEntry {
   id: string; channel_id: string; channel_name?: string; channel_is_demo?: number; scheduled_on: string; title: string;
@@ -60,6 +83,8 @@ export interface JobDetail {
   job: Job;
   events: { at: string; level: string; kind: string; message: string }[];
   artifacts: { id: string; kind: string; path: string; label: string; size_bytes: number | null; sha256: string | null; simulated: number }[];
+  attempt_history: Attempt[];
+  briefing: BriefingPayload | null;
   package: { id: string; title: string; description: string; tags: string[]; checklist: string[]; state: string; created_at: string } | null;
 }
 
@@ -106,8 +131,13 @@ export const JOB_STATE: Record<string, { label: string; tone: "good" | "warn" | 
   running: { label: "Em execução", tone: "info" },
   failed: { label: "Falhou", tone: "bad" },
   delivered: { label: "Arquivos entregues", tone: "ochre" },
-  package_ready: { label: "Pronto para sua revisão", tone: "good" },
+  package_ready: { label: "PRONTO PARA REVISÃO", tone: "good" },
   cancelled: { label: "Cancelada", tone: "neutral" },
+};
+
+export const ATTEMPT_OUTCOME: Record<string, { label: string; tone: "good" | "warn" | "bad" | "info" | "neutral" }> = {
+  em_andamento: { label: "Em andamento", tone: "info" }, entregue: { label: "Entregue", tone: "good" }, falhou: { label: "Falhou", tone: "bad" },
+  prazo_vencido: { label: "Agente parou de responder", tone: "warn" }, cancelada: { label: "Cancelada", tone: "neutral" },
 };
 
 export const CALENDAR_STATUS: Record<string, string> = {

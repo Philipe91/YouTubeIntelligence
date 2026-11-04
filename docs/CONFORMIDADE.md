@@ -49,12 +49,19 @@ Método sem custo configurado falha antes da chamada. `videos.insert`, `videos.u
 
 Segundo a [ajuda do YouTube](https://support.google.com/youtube/answer/15424877), Short é um vídeo **quadrado ou vertical de até 3 minutos**, enviado desde **15/10/2024** (08/12/2025 para canais oficiais de artista). Envios anteriores acima de 1 minuto seguem longos, e 16:9 fica longo.
 
-| Regra | Situação |
+A Data API não informa a proporção. O campo `fileDetails` só vem para o dono do vídeo. O sinal público é o tamanho do player embutido (`player.embedWidth` e `embedHeight`, com `maxHeight`), e a documentação avisa que ele **cai em 4:3 quando a proporção é desconhecida**.
+
+| Caso | Resultado |
 |---|---|
-| Até 180 s desde 15/10/2024 | Implementada |
-| Antes dessa data, até 60 s | Implementada |
-| Proporção | **Não verificada:** a Data API não informa diretamente. Vídeo 16:9 curto pode ser contado como Short, e o rótulo segue "estimado" |
-| Data de artistas oficiais | **Não implementada:** não há como identificar esses canais pela regra atual |
+| Acima de 180 s, ou acima de 60 s com envio antes de 15/10/2024 | Longo |
+| Curto, player vertical ou quadrado | Short, rotulado como estimado |
+| Curto, player horizontal e não 4:3 (16:9, por exemplo) | Longo, rotulado como estimado |
+| Curto, player 4:3 ou sem esse dado | **INDETERMINADO**, fora de comparações, tendências e oportunidades |
+| Dados fictícios | Mantêm o formato inventado, com origem `fictional` |
+
+Vídeos reais antes tratados como Short só pela duração viram INDETERMINADO na migração `002`.
+
+**Limites:** a regra veio da documentação e foi testada só com respostas simuladas. O tamanho do player é um indício, não uma confirmação do YouTube. A data de 08/12/2025 para artistas oficiais não é aplicada, por não haver como identificar esses canais.
 
 ## Dados do estúdio
 

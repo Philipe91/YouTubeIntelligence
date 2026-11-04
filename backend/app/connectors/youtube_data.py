@@ -160,7 +160,9 @@ class YouTubeDataClient:
         if len(ids) > 50:
             raise ValueError("videos.list aceita até 50 IDs por chamada")
         return self.request("videos.list", "/videos", {
-            "part": "snippet,contentDetails,statistics,liveStreamingDetails", "id": ",".join(ids), "maxResults": 50,
+            # player + maxHeight devolvem o tamanho do player, único sinal público de proporção.
+            "part": "snippet,contentDetails,statistics,liveStreamingDetails,player", "id": ",".join(ids), "maxResults": 50,
+            "maxHeight": 720,
         }, use_cache=use_cache)
 
     def channels(self, ids: list[str] | None = None, handle: str | None = None, use_cache: bool = True) -> dict:

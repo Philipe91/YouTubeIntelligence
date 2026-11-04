@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ActionForm } from "@/components/ActionForm";
 import { Pill, SectionTitle } from "@/components/ui";
 import { jobAction } from "@/app/canais/actions";
-import { JOB_STATE, type AuthStatus, type Channel, type ClaudeStatus, type Job } from "@/lib/studio";
+import { ATTEMPT_OUTCOME, JOB_STATE, type Attempt, type AuthStatus, type Channel, type ClaudeStatus, type Job } from "@/lib/studio";
 import { dateTime } from "@/lib/format";
 
 export function OriginPill({ isDemo }: { isDemo: boolean }) {
@@ -75,6 +75,44 @@ export function JobCard({ job, showChannel = false }: { job: Job; showChannel?: 
       {job.last_error && <p className="mt-2 text-sm text-bad">{job.last_error}</p>}
       <div className="mt-3"><JobActions job={job} /></div>
     </article>
+  );
+}
+
+export function AttemptsTable({ attempts, showTitle = false }: { attempts: Attempt[]; showTitle?: boolean }) {
+  if (attempts.length === 0) return <p className="text-sm text-ink-3">Nenhuma execução ainda.</p>;
+  return (
+    <div className="overflow-x-auto">
+      <table className="data-table w-full min-w-[32rem]">
+        <thead><tr>{showTitle && <th scope="col">Tarefa</th>}<th scope="col">Tentativa</th><th scope="col">Agente</th><th scope="col">Início</th><th scope="col">Resultado</th></tr></thead>
+        <tbody>
+          {attempts.map((attempt) => {
+            const outcome = ATTEMPT_OUTCOME[attempt.outcome] ?? { label: attempt.outcome, tone: "neutral" as const };
+            return (
+              <tr key={`${attempt.job_id ?? ""}-${attempt.number}`}>
+                {showTitle && <td className="max-w-[14rem]"><span className="line-clamp-2">{attempt.title}</span></td>}
+                <td>{attempt.number}</td>
+                <td>{attempt.agent_id}</td>
+                <td>{dateTime(attempt.started_at)}</td>
+                <td><Pill tone={outcome.tone}>{outcome.label}</Pill>{attempt.error && <div className="mt-0.5 text-[0.8125rem] text-ink-3">{attempt.error}</div>}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export function FileLink({ channelId, jobId, artifact }: { channelId: string; jobId: string; artifact: { id: string; label: string; kind: string; path: string; size_bytes: number | null } }) {
+  const name = artifact.label || artifact.kind;
+  if (artifact.path.startsWith("simulado://")) {
+    return <p><span className="font-medium">{name}</span> <span className="text-[0.8125rem] text-ink-3">Item simulado, sem arquivo no disco.</span></p>;
+  }
+  return (
+    <p>
+      <a href={`/canais/${channelId}/tarefas/${jobId}/arquivos/${artifact.id}`} className="font-medium text-cobalt underline underline-offset-2">{name}</a>
+      {artifact.size_bytes !== null && <span className="text-[0.8125rem] text-ink-3"> {artifact.size_bytes} bytes</span>}
+    </p>
   );
 }
 

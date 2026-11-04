@@ -1,0 +1,128 @@
+# Perfis de pipeline por canal. Levantamento em docs/PIPELINES.md.
+#
+# adapter "simulado": usado hoje, não executa nada pesado.
+# adapter "comando": só DESCREVE um pipeline externo. Nesta etapa, nada é executado e os projetos
+# originais não são alterados. Os comandos são previsões a confirmar antes de ligar a execução.
+
+[profiles.simulado]
+label = "Simulado (padrão)"
+
+[profiles.simulado.stages.roteiro]
+adapter = "simulado"
+[profiles.simulado.stages.narracao]
+adapter = "simulado"
+[profiles.simulado.stages.animacao]
+adapter = "simulado"
+[profiles.simulado.stages.renderizacao]
+adapter = "simulado"
+[profiles.simulado.stages.thumbnail]
+adapter = "simulado"
+
+[profiles.brother_quill]
+label = "Brother Quill (animação própria)"
+
+[profiles.brother_quill.stages.roteiro]
+adapter = "comando"
+project = 'D:\projetos\BROTHER QUILL\roteiros'
+command = "python -I gen_<id>.py"
+output = "roteiros/<id>.json"
+notes = "Cada vídeo tem um gerador próprio escrito à mão. Falta um gerador a partir do briefing."
+
+[profiles.brother_quill.stages.narracao]
+adapter = "comando"
+project = 'D:\ViralReplicator_motion\remotion'
+command = "python tts.py <id>"
+output = "public/<id>/timeline.json"
+requires = ["VoiceStudio ligado: D:\\VoiceStudio\\app\\resources\\backend\\main.py"]
+notes = "Argumentos a confirmar lendo tts.py."
+
+[profiles.brother_quill.stages.animacao]
+adapter = "comando"
+project = 'D:\projetos\BROTHER QUILL\anim'
+command = "bash qa/rodada.sh <id> <id>_short"
+output = "anim/out/qa/"
+notes = "QA geométrico e folhas de contato, obrigatórios antes de renderizar. Revisor visual em qa/REVISOR.md."
+
+[profiles.brother_quill.stages.renderizacao]
+adapter = "comando"
+project = 'D:\projetos\BROTHER QUILL\anim'
+command = "node render.mjs --frames --fps=24 --workers=1"
+output = "anim/out/"
+heavy = true
+notes = "Produção pesada. Mais de 1 worker estoura a RAM. Depois: mix_longo.py e ffmpeg."
+
+[profiles.brother_quill.stages.thumbnail]
+adapter = "indefinido"
+project = 'D:\projetos\BROTHER QUILL\anim\assets'
+notes = "Não encontrei gerador de thumbnail dedicado neste projeto."
+
+[profiles.viral_replicator]
+label = "ViralReplicator (geração local via ComfyUI)"
+
+[profiles.viral_replicator.stages.roteiro]
+adapter = "comando"
+project = 'C:\Users\ph_re\Documents\ViralReplicator'
+command = "produto: canais/<id>.json"
+output = "canais/<id>.json"
+notes = "Roteiro é um JSON do canal. O projeto tem fluxo próprio com Codex: leia AGENTS.md antes de ligar."
+
+[profiles.viral_replicator.stages.narracao]
+adapter = "comando"
+project = 'C:\Users\ph_re\Documents\ViralReplicator'
+command = "python produce_video.py --etapa <etapa> <roteiro>"
+output = "output/"
+notes = "O orquestrador produce_video.py cobre as etapas; nomes e argumentos a confirmar."
+
+[profiles.viral_replicator.stages.animacao]
+adapter = "comando"
+project = 'C:\Users\ph_re\Documents\ViralReplicator'
+command = "python produce_video.py --etapa <etapa> <roteiro>"
+output = "output/clips/"
+heavy = true
+requires = ["ComfyUI ligado"]
+notes = "Usa GPU."
+
+[profiles.viral_replicator.stages.renderizacao]
+adapter = "comando"
+project = 'C:\Users\ph_re\Documents\ViralReplicator'
+command = "python produce_video.py --montagem pro <roteiro>"
+output = "output/"
+heavy = true
+
+[profiles.viral_replicator.stages.thumbnail]
+adapter = "comando"
+project = 'C:\Users\ph_re\Documents\ViralReplicator'
+command = "python comfy_batch.py"
+output = "output/thumbs/"
+heavy = true
+requires = ["ComfyUI ligado"]
+notes = "Hoje parte de virais do banco do próprio projeto. Precisaria aceitar a ideia do briefing."
+
+[profiles.money_printer]
+label = "MoneyPrinterTurbo (vídeo curto automático)"
+
+[profiles.money_printer.stages.roteiro]
+adapter = "comando"
+project = 'D:\projetos\MoneyPrinterTurbo'
+command = "python cli.py"
+notes = "Ferramenta de ponta a ponta: roteiro, narração e montagem na mesma execução. Parâmetros a confirmar."
+
+[profiles.money_printer.stages.narracao]
+adapter = "indefinido"
+project = 'D:\projetos\MoneyPrinterTurbo'
+notes = "Incluída na execução única do roteiro."
+
+[profiles.money_printer.stages.animacao]
+adapter = "indefinido"
+project = 'D:\projetos\MoneyPrinterTurbo'
+notes = "Usa material de banco de imagens, não animação própria."
+
+[profiles.money_printer.stages.renderizacao]
+adapter = "indefinido"
+project = 'D:\projetos\MoneyPrinterTurbo'
+notes = "Incluída na execução única do roteiro."
+
+[profiles.money_printer.stages.thumbnail]
+adapter = "indefinido"
+project = 'D:\projetos\MoneyPrinterTurbo'
+notes = "Não verificado."

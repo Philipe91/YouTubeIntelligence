@@ -487,7 +487,7 @@ def test_package_requires_delivered_job_and_own_artifact(db, contract):
 def test_contract_has_no_publish_or_owner_operations_as_agent_tools():
     code = (BACKEND_DIR / "app" / "studio" / "mcp_server.py").read_text(encoding="utf-8")
     tools = [line.split("def ")[1].split("(")[0] for line, previous in zip(code.splitlines()[1:], code.splitlines()) if "@server.tool()" in previous]
-    assert len(tools) == 14
+    assert len(tools) == 17
     for forbidden in ("publish", "upload", "insert", "authorize", "cancel", "retry"):
         assert not [t for t in tools if forbidden in t and t != "prepare_publish_package"], forbidden
 
@@ -502,7 +502,10 @@ def test_simulator_walks_the_contract_to_review_package_without_files(db, contra
     assert states[0] == "running" and states[-1] == "package_ready"
     final = contract.get_job(job["id"])
     assert final["job"]["simulated"] is True and final["job"]["progress"] == 100
-    assert all(a["path"].startswith("simulado://") and a["simulated"] for a in final["artifacts"])
+    assert final["job"]["state_label"] == "PRONTO PARA REVISÃO"
+    assert all(a["simulated"] for a in final["artifacts"])
+    real = [a for a in final["artifacts"] if not a["path"].startswith("simulado://")]
+    assert len(real) == 1 and real[0]["sha256"] and real[0]["path"].endswith("resultado_teste.txt"), "só um arquivo de texto de teste"
     assert final["package"]["state"] == "ready_for_human_review"
     with pytest.raises(StudioError) as caught:
         simulator.simulate_step(contract, job["id"], channel["id"])

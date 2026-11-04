@@ -5,7 +5,7 @@ import { integer } from "@/lib/format";
 
 export default async function Videos({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const params = await searchParams;
-  const format = formatParam(params.f);
+  const format = params.f === "indeterminate" ? "indeterminate" : formatParam(params.f);
   const current = {
     q: str(params.q), niche_id: str(params.niche_id), language: str(params.language), country: str(params.country),
     channel_id: str(params.channel_id), days: str(params.days), sort: str(params.sort) ?? "idr", outliers_only: str(params.outliers_only),
@@ -17,8 +17,11 @@ export default async function Videos({ searchParams }: { searchParams: Promise<R
   return (
     <>
       <PageHeader title="Vídeos" intro="Filtre por nicho, idioma, país e período. Passe o mouse sobre um número para ver a fonte.">
-        <FormatTabs current={format} basePath="/videos" params={current} />
+        <FormatTabs current={format} basePath="/videos" params={current} withIndeterminate />
       </PageHeader>
+      {format === "indeterminate" && (
+        <p className="mb-4 max-w-3xl rounded-md bg-page px-3 py-2 text-sm text-ink-2">Vídeos curtos sem dados que confirmem se são Shorts. Ficam fora de comparações e tendências, em vez de serem classificados por palpite.</p>
+      )}
       <form className="mb-4 flex flex-wrap items-end gap-2">
         <input type="hidden" name="f" value={format} />
         <label className="text-[0.8125rem] text-ink-2">Tema no título<br /><input name="q" defaultValue={current.q} className="field w-44" placeholder="ex.: Cartago" /></label>

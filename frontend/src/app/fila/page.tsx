@@ -1,3 +1,4 @@
+import { AutoRefresh } from "@/components/AutoRefresh";
 import { JobCard } from "@/components/studio";
 import { Empty, PageHeader, Panel, SectionTitle, str } from "@/components/ui";
 import { studioGet, type Job, type StudioOverview } from "@/lib/studio";
@@ -17,6 +18,7 @@ export default async function Queue({ searchParams }: { searchParams: Promise<Re
   const cancelled = jobs.jobs.filter((job) => job.state === "cancelled").length;
   return (
     <>
+      <AutoRefresh active={jobs.jobs.some((job) => ["authorized", "running", "delivered"].includes(job.state))} />
       <PageHeader title="Fila de produção" intro="Todas as tarefas dos seus canais. Você autoriza, os agentes executam, e nada é publicado." />
       <form className="mb-4 flex items-end gap-2">
         <label className="text-[0.8125rem] text-ink-2">Canal<br />

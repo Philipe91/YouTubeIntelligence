@@ -88,7 +88,9 @@ def analyze(conn: sqlite3.Connection, settings: Settings) -> Analysis:
 
 FORMAT_SOURCE_LABEL = {
     "analytics": ("measured", "YouTube Analytics (creatorContentType)"),
-    "duration": ("estimated", "Estimado por duração e data de envio: a Data API não informa proporção nem se é Short"),
+    "duration": ("estimated", "Acima do limite de duração de um Short"),
+    "aspect_ratio": ("estimated", "Duração, data de envio e proporção do player embutido"),
+    "fictional": ("estimated", "Formato definido nos dados fictícios"),
     "broadcast": ("measured", "liveStreamingDetails"),
     "missing": ("unavailable", "Duração ausente"),
 }
@@ -103,6 +105,8 @@ def _video_row(row: sqlite3.Row, analysis: Analysis, settings: Settings) -> dict
     views = (metric(latest.views, "measured", "videos.list", as_of=as_of) if latest
              else metric(None, "unavailable", "videos.list", "A API não retornou a contagem de views."))
     kind, source = FORMAT_SOURCE_LABEL[row["format_source"]]
+    if row["format"] == "indeterminate":
+        kind, source = "unavailable", "Vídeo curto sem dados que confirmem se é Short. Fica fora das comparações."
     output: dict[str, Any] = {
         "id": row["id"], "title": row["title"], "channel_id": row["channel_id"], "channel_title": row["channel_title"],
         "published_at": row["published_at"], "duration_seconds": row["duration_seconds"], "language": row["language"],

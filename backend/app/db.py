@@ -41,12 +41,22 @@ def migrate(conn: sqlite3.Connection, migrations_dir: Path = MIGRATIONS_DIR) -> 
     for script in sorted(migrations_dir.glob("*.sql")):
         if script.name in applied:
             continue
+        # Migrações podem recriar tabelas: com chaves estrangeiras ligadas, DROP TABLE apagaria
+        # em cascata as linhas filhas. A integridade é conferida antes do COMMIT.
+        conn.commit()
+        conn.execute("PRAGMA foreign_keys = OFF")
         try:
-            conn.executescript("BEGIN;\n" + script.read_text(encoding="utf-8") + "\nCOMMIT;")
+            conn.executescript("BEGIN;\n" + script.read_text(encoding="utf-8"))
+            violations = conn.execute("PRAGMA foreign_key_check").fetchall()
+            if violations:
+                raise sqlite3.IntegrityError(f"{script.name} violaria chaves estrangeiras em {len(violations)} linhas.")
+            conn.commit()
         except sqlite3.Error:
             if conn.in_transaction:
                 conn.rollback()
             raise
+        finally:
+            conn.execute("PRAGMA foreign_keys = ON")
         conn.execute(
             "INSERT INTO schema_migrations (name, applied_at) VALUES (?, ?)",
             (script.name, to_iso(utcnow())),

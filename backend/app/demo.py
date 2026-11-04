@@ -117,7 +117,7 @@ def seed_demo(conn: sqlite3.Connection, now: datetime) -> None:
                 rising = topic in RISING_TOPICS and age_days > 3 and rng.random() < 0.8
                 duration = rng.randint(25, 175) if video_format == "short" else rng.randint(360, 1500)
                 video_rows.append((video_id, channel_id, title, f"Descrição fictícia sobre {topic}.", to_iso(published), duration,
-                                   video_format, "duration", language, country,
+                                   video_format, "fictional", language, country,
                                    stamp, to_iso(published + timedelta(hours=1))))
                 by_language.setdefault(language, []).append((video_id, topic))
                 for captured in _capture_times(published, monitor_start, now):

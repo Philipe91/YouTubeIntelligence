@@ -158,7 +158,7 @@ def test_add_channel_and_collect_splits_formats(conn, live_settings):
     _, channel_id = _seed_channel(conn, live_settings, fake)
     assert channel_id == "UCfake1"
     rows = conn.execute("SELECT format, format_source, COUNT(*) AS n FROM videos GROUP BY format").fetchall()
-    assert {(r["format"], r["format_source"], r["n"]) for r in rows} == {("short", "duration", 6), ("long", "duration", 6)}
+    assert {(r["format"], r["format_source"], r["n"]) for r in rows} == {("short", "aspect_ratio", 6), ("long", "duration", 6)}
     assert conn.execute("SELECT COUNT(*) AS n FROM snapshots").fetchone()["n"] == 12
 
 
@@ -776,6 +776,6 @@ def test_system_endpoint_exposes_no_secret(tmp_path):
 
 def test_migrations_are_idempotent(tmp_path):
     conn = connect(tmp_path / "x.sqlite")
-    assert migrate(conn) == ["001_init.sql"]
+    assert migrate(conn) == ["001_init.sql", "002_video_format.sql"]
     assert migrate(conn) == []
     conn.close()

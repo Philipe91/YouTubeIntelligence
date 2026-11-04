@@ -72,7 +72,8 @@ O registro é uma declaração sua de que o Google aprovou o uso. O app não con
 | `store.py` | Canais, concorrentes, histórico, calendário, recomendações. Consultas limitadas por canal |
 | `recommend.py` | Cruza pesquisas com o perfil editorial. Canal real nunca usa dado fictício |
 | `contract.py` | Contrato `yti.agent.v1`: estados, idempotência, lease, recuperação |
-| `simulator.py` | Agente simulado, uma etapa por chamada, sem render nem arquivos |
+| `pipelines.py` | Adaptadores por etapa. Só o simulado executa; os demais apenas descrevem |
+| `simulator.py` | Agente simulado, uma etapa por chamada, sem render. Gera só um texto de teste |
 | `mcp_server.py` | Servidor MCP stdio para o Claude Code. Sem ferramentas de autorizar ou publicar |
 | `status.py` | Estado do YouTube e do Claude, só leitura e sem rede |
 | `router.py` | API usada pelo dashboard |

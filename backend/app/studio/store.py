@@ -14,7 +14,7 @@ from ..db import connect, migrate, to_iso, utcnow
 
 MIGRATIONS = Path(__file__).resolve().parent.parent.parent / "migrations_studio"
 JSON_LIST_FIELDS = {"keywords": "keywords_json", "avoid": "avoid_json", "topic_backlog": "topic_backlog_json", "formats": "formats_json"}
-TEXT_FIELDS = ("name", "handle", "youtube_channel_id", "niche", "language", "country", "audience", "positioning", "tone")
+TEXT_FIELDS = ("name", "handle", "youtube_channel_id", "niche", "language", "country", "audience", "positioning", "tone", "pipeline_profile")
 NUMBER_FIELDS = ("long_target_seconds", "short_target_seconds", "cadence_per_week")
 AUTOMATION_FIELDS = {"auto_research": ("off", "on"), "auto_briefing": ("off", "on"),
                      "auto_production": ("off", "manual", "auto_simulated"), "auto_package": ("off", "on")}
@@ -83,6 +83,11 @@ def _validate(fields: dict[str, Any]) -> dict[str, Any]:
             raise StudioError("unknown_field", f"Campo não reconhecido: {key}.")
     if "name" in columns and not columns["name"]:
         raise StudioError("invalid_field", "Informe o nome do canal.")
+    if "pipeline_profile" in columns:
+        from .pipelines import load_profiles  # Evita ciclo: pipelines usa StudioError deste módulo.
+
+        if columns["pipeline_profile"] not in load_profiles():
+            raise StudioError("invalid_field", "Perfil de pipeline desconhecido.")
     if columns.get("youtube_channel_id") == "":
         columns["youtube_channel_id"] = None
     if columns.get("youtube_channel_id") and not YOUTUBE_ID.match(columns["youtube_channel_id"]):

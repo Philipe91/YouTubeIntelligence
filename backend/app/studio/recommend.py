@@ -22,7 +22,7 @@ from ..db import to_iso, utcnow
 from ..metrics.opportunity import Opportunity
 from ..metrics.text import normalize, tokens
 from ..policy import policy_state
-from .store import StudioError, get_channel, list_history, new_id, recommendation_view
+from .store import StudioError, add_calendar, get_channel, list_history, new_id, recommendation_view, update_calendar
 
 MAX_NEW_PER_RUN = 6
 FACTS_DEFAULT = "Confirme datas, nomes e afirmações em fontes confiáveis antes de escrever o roteiro."
@@ -207,6 +207,121 @@ def generate(conn: sqlite3.Connection, research: sqlite3.Connection | None, sett
     conn.commit()
     return {"created": created, "data_policy": state.state,
             "note": "Texto gerado por regras, para você editar. Peça ao Claude pelo contrato do agente para uma versão escrita."}
+
+
+def create_owner_recommendation(conn: sqlite3.Connection, channel_id: str, *, subject: str, justification: str, video_format: str,
+                                duration_seconds: int | None = None, target_audience: str = "", priority: str = "media") -> dict:
+    """Recomendação escrita por você. Começa sem títulos: gere ou escreva depois."""
+    channel = get_channel(conn, channel_id)
+    subject = subject.strip()
+    if len(subject) < 3:
+        raise StudioError("invalid_field", "Informe o assunto do vídeo.")
+    if not justification.strip():
+        raise StudioError("invalid_field", "Informe a justificativa.")
+    if video_format not in channel["formats"]:
+        raise StudioError("format_not_in_profile", "Este canal não usa esse formato.", 422)
+    if priority not in {"alta", "media", "baixa"}:
+        raise StudioError("invalid_field", "Prioridade inválida.")
+    if duration_seconds is not None and duration_seconds <= 0:
+        raise StudioError("invalid_field", "A duração precisa ser positiva.")
+    if _is_avoided(subject, channel["avoid"]):
+        raise StudioError("subject_avoided", "O assunto está na lista de temas evitados do canal.", 422)
+    text = _text(channel["language"])
+    thumbnail = text["thumb"].format(s=subject)
+    if channel["tone"]:
+        thumbnail += f" {text['tone']}: {channel['tone']}."
+    record = _insert(
+        conn, channel, subject=subject, justification=justification.strip(),
+        sources=[{"kind": "dono", "label": "Ideia registrada por você", "url": None, "fictional": channel["is_demo"]}],
+        titles=[], thumbnail_idea=thumbnail, hook=text["hook"].format(s=subject), video_format=video_format,
+        duration_seconds=duration_seconds or _duration(channel, video_format),
+        target_audience=target_audience.strip() or channel["audience"] or "Público ainda não definido no perfil do canal.",
+        priority=priority, facts=[FACTS_DEFAULT], data_basis="editorial", origin="dono",
+    )
+    if record is None:
+        raise StudioError("duplicate_recommendation", "Já existe recomendação com este assunto e formato neste canal.", 409)
+    conn.commit()
+    return record
+
+
+def _open_recommendation(conn: sqlite3.Connection, channel_id: str, recommendation_id: str) -> sqlite3.Row:
+    row = conn.execute("SELECT * FROM recommendations WHERE id = ? AND channel_id = ?", (recommendation_id, channel_id)).fetchone()
+    if row is None:
+        raise StudioError("recommendation_not_in_channel", "A recomendação não pertence a este canal.", 404)
+    if row["status"] not in {"nova", "aceita"}:
+        raise StudioError("recommendation_unavailable", f"A recomendação está como '{row['status']}'.", 409)
+    return row
+
+
+def generate_titles(conn: sqlite3.Connection, channel_id: str, recommendation_id: str) -> dict:
+    """Três títulos por regras, no idioma do canal. Pode ser refeito até a produção começar."""
+    channel = get_channel(conn, channel_id)
+    row = _open_recommendation(conn, channel_id, recommendation_id)
+    subject = row["subject"][:1].upper() + row["subject"][1:]
+    titles = [pattern.format(s=subject) for pattern in _text(channel["language"])["titles"]]
+    conn.execute("UPDATE recommendations SET titles_json = ?, updated_at = ? WHERE id = ?",
+                 (json.dumps(titles, ensure_ascii=False), to_iso(utcnow()), recommendation_id))
+    conn.commit()
+    return recommendation_view(conn.execute("SELECT * FROM recommendations WHERE id = ?", (recommendation_id,)).fetchone())
+
+
+OUTLINE = {
+    "long": (("Gancho", 0.05), ("Contexto", 0.2), ("Desenvolvimento", 0.45), ("Virada", 0.2), ("Fecho", 0.1)),
+    "short": (("Gancho", 0.15), ("Desenvolvimento", 0.65), ("Fecho", 0.2)),
+}
+
+
+def approve_briefing(conn: sqlite3.Connection, channel_id: str, recommendation_id: str, chosen_title: str,
+                     planned_on: str | None = None, approved_by: str = "dono_local") -> dict:
+    """Só o dono aprova: esta função não é exposta ao agente."""
+    channel = get_channel(conn, channel_id)
+    row = _open_recommendation(conn, channel_id, recommendation_id)
+    title = chosen_title.strip()
+    if not title:
+        raise StudioError("title_required", "Escolha ou escreva um título.")
+    if len(title) > 100:
+        raise StudioError("invalid_field", "O título pode ter no máximo 100 caracteres.")
+    duration = row["duration_seconds"]
+    payload = {
+        "chosen_title": title, "subject": row["subject"], "justification": row["justification"], "hook": row["hook"],
+        "thumbnail_idea": row["thumbnail_idea"], "format": row["format"], "duration_seconds": duration,
+        "target_audience": row["target_audience"], "language": channel["language"], "tone": channel["tone"],
+        "positioning": channel["positioning"], "avoid": channel["avoid"],
+        "outline": [{"section": name, "target_seconds": round(duration * share)} for name, share in OUTLINE[row["format"]]],
+        "sources": json.loads(row["sources_json"]), "facts_to_verify": json.loads(row["facts_to_verify_json"]),
+        "data_basis": row["data_basis"], "fictional": channel["is_demo"] or row["data_basis"] == "demo_metrics",
+        "constraints": ["Não publicar.", "Não inventar números de desempenho.", "Conferir fatos antes de produzir."],
+    }
+    stamp = to_iso(utcnow())
+    existing = conn.execute("SELECT id FROM briefings WHERE recommendation_id = ?", (recommendation_id,)).fetchone()
+    briefing_id = existing["id"] if existing else new_id("brf")
+    conn.execute(
+        """INSERT INTO briefings (id, channel_id, recommendation_id, chosen_title, payload_json, approved_by, approved_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET chosen_title = excluded.chosen_title,
+           payload_json = excluded.payload_json, approved_by = excluded.approved_by, approved_at = excluded.approved_at, updated_at = excluded.updated_at""",
+        (briefing_id, channel_id, recommendation_id, title, json.dumps(payload, ensure_ascii=False), approved_by, stamp, stamp),
+    )
+    conn.execute("UPDATE recommendations SET status = 'aceita', updated_at = ? WHERE id = ?", (stamp, recommendation_id))
+    conn.commit()
+    # O calendário acompanha o briefing: reaprovar atualiza o item existente, em vez de duplicar.
+    entry = conn.execute("SELECT id FROM calendar_entries WHERE recommendation_id = ? AND channel_id = ?", (recommendation_id, channel_id)).fetchone()
+    if entry:
+        if planned_on:
+            update_calendar(conn, channel_id, entry["id"], scheduled_on=planned_on)
+        conn.execute("UPDATE calendar_entries SET title = ?, updated_at = ? WHERE id = ?", (title, stamp, entry["id"]))
+        conn.commit()
+    elif planned_on:
+        add_calendar(conn, channel_id, scheduled_on=planned_on, title=title, format=row["format"],
+                     notes="Criado ao aprovar o briefing.", recommendation_id=recommendation_id)
+    return briefing_view(conn.execute("SELECT * FROM briefings WHERE id = ?", (briefing_id,)).fetchone())
+
+
+def briefing_view(row: sqlite3.Row | None) -> dict | None:
+    if row is None:
+        return None
+    data = dict(row)
+    data["payload"] = json.loads(data.pop("payload_json"))
+    return data
 
 
 class SourceInput(BaseModel):

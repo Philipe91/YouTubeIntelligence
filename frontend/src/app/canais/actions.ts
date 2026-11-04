@@ -136,6 +136,44 @@ export async function updateCalendarEntry(previous: ActionState, data: FormData)
   }), id);
 }
 
+export async function createRecommendation(previous: ActionState, data: FormData): Promise<ActionState> {
+  const id = text(data, "channel_id");
+  const minutes = number(data, "duration_minutes");
+  return finish(previous, await studioWrite("POST", `/channels/${seg(id)}/recommendations`, {
+    subject: text(data, "subject"), justification: text(data, "justification"), format: text(data, "format"),
+    duration_seconds: minutes === null ? null : Math.round(minutes * 60), editorial_priority: text(data, "editorial_priority") || "media",
+  }), id);
+}
+
+export async function generateTitles(previous: ActionState, data: FormData): Promise<ActionState> {
+  const id = text(data, "channel_id");
+  return finish(previous, await studioWrite("POST", `/channels/${seg(id)}/recommendations/${seg(text(data, "recommendation_id"))}/titles`), id);
+}
+
+export async function approveBriefing(previous: ActionState, data: FormData): Promise<ActionState> {
+  const id = text(data, "channel_id");
+  const choice = text(data, "chosen");
+  const title = choice === "__outro__" ? text(data, "custom_title") : choice;
+  return finish(previous, await studioWrite("POST", `/channels/${seg(id)}/recommendations/${seg(text(data, "recommendation_id"))}/briefing`, {
+    chosen_title: title, planned_on: text(data, "planned_on") || null,
+  }), id);
+}
+
+export async function dispatchBriefing(previous: ActionState, data: FormData): Promise<ActionState> {
+  const id = text(data, "channel_id");
+  return finish(previous, await studioWrite("POST", `/channels/${seg(id)}/briefings/${seg(text(data, "briefing_id"))}/dispatch`, { idempotency_key: text(data, "form_key") }), id);
+}
+
+export async function acknowledgeAlert(previous: ActionState, data: FormData): Promise<ActionState> {
+  const id = text(data, "channel_id");
+  return finish(previous, await studioWrite("POST", `/channels/${seg(id)}/alerts/${seg(text(data, "event_id"))}/acknowledge`), id);
+}
+
+export async function updatePipelineProfile(previous: ActionState, data: FormData): Promise<ActionState> {
+  const id = text(data, "channel_id");
+  return finish(previous, await studioWrite("PATCH", `/channels/${seg(id)}`, { fields: { pipeline_profile: text(data, "pipeline_profile") } }), id);
+}
+
 const JOB_ACTIONS = new Set(["authorize", "cancel", "retry", "simulate-step", "simulate-failure"]);
 
 export async function jobAction(previous: ActionState, data: FormData): Promise<ActionState> {

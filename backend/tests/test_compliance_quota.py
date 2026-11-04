@@ -129,12 +129,88 @@ def test_buckets_are_counted_independently(conn, tmp_path):
 
 @pytest.mark.parametrize("seconds,published,expected", [
     (120, "2024-10-14T23:00:00Z", "long"),
-    (120, "2024-10-15T00:00:00Z", "short"),
-    (60, "2020-01-01T00:00:00Z", "short"),
+    (120, "2024-10-15T00:00:00Z", "indeterminate"),
+    (60, "2020-01-01T00:00:00Z", "indeterminate"),
     (61, "2020-01-01T00:00:00Z", "long"),
-    (180, "2026-01-01T00:00:00Z", "short"),
+    (180, "2026-01-01T00:00:00Z", "indeterminate"),
     (181, "2026-01-01T00:00:00Z", "long"),
 ])
 def test_three_minute_rule_depends_on_upload_date(seconds, published, expected):
     result = classify_format(seconds, 180, published_at=published, short_cutoff="2024-10-15", legacy_short_max_seconds=60)
     assert result == (expected, "duration")
+
+
+def _short_video(**player):
+    return classify_format(45, 180, published_at="2026-01-01T00:00:00Z", short_cutoff="2024-10-15", **player)
+
+
+def test_short_16_9_video_is_not_a_short():
+    assert _short_video(embed_width=1280, embed_height=720) == ("long", "aspect_ratio")
+
+
+def test_vertical_and_square_short_videos_are_shorts():
+    assert _short_video(embed_width="405", embed_height="720") == ("short", "aspect_ratio")
+    assert _short_video(embed_width=720, embed_height=720) == ("short", "aspect_ratio")
+
+
+@pytest.mark.parametrize("player", [
+    {}, {"embed_width": 960, "embed_height": 720}, {"embed_width": None, "embed_height": 720},
+    {"embed_width": "x", "embed_height": 720}, {"embed_width": 0, "embed_height": 720},
+])
+def test_missing_or_4_3_player_stays_indeterminate(player):
+    # A documentação avisa que o player assume 4:3 quando a proporção é desconhecida.
+    assert _short_video(**player) == ("indeterminate", "duration")
+
+
+def test_long_video_never_needs_player():
+    assert classify_format(600, 180, embed_width=405, embed_height=720) == ("long", "duration")
+
+
+def test_old_vertical_video_above_one_minute_stays_long():
+    result = classify_format(120, 180, published_at="2023-01-01T00:00:00Z", short_cutoff="2024-10-15", embed_width=405, embed_height=720)
+    assert result == ("long", "duration")
+
+
+def test_collector_keeps_undetermined_videos_out_of_comparisons(conn, tmp_path):
+    from app import collector, services
+
+    settings = Settings(mode="live", data_dir=tmp_path, compliance=APPROVED)
+    conn.execute("INSERT INTO channels (id, title, text_refreshed_at, created_at) VALUES ('UCa', 't', '2026-11-01T00:00:00Z', '2026-11-01T00:00:00Z')")
+    base = {"statistics": {"viewCount": "10"}, "contentDetails": {"duration": "PT45S"}}
+    for video_id in ("a1", "a2"):
+        snippet = {"channelId": "UCa", "title": video_id, "publishedAt": "2026-10-01T00:00:00Z"}
+        collector.upsert_video(conn, {"id": video_id, "snippet": snippet, **base}, NOW, settings)
+    conn.commit()
+    items = services.list_videos(conn, settings, video_format="indeterminate")["items"]
+    assert len(items) == 2 and services.list_videos(conn, settings, video_format="short")["total"] == 0
+    assert items[0]["format_label"]["kind"] == "unavailable"
+    assert items[0]["outlier"]["status"] == "unknown_format" and items[0]["idr"]["value"] is None
+
+
+def test_migration_keeps_rows_and_marks_real_short_guesses_as_indeterminate(tmp_path):
+    import shutil
+    import sqlite3
+
+    from app.db import MIGRATIONS_DIR, connect, migrate
+
+    old = tmp_path / "antigas"
+    old.mkdir()
+    shutil.copy(MIGRATIONS_DIR / "001_init.sql", old)
+    conn = connect(tmp_path / "x.sqlite")
+    migrate(conn, old)
+    stamp = "2026-10-01T00:00:00Z"
+    conn.execute("INSERT INTO channels (id, title, text_refreshed_at, created_at) VALUES ('c', 't', ?, ?)", (stamp, stamp))
+    rows = [("real_curto", "short", "duration"), ("real_longo", "long", "duration"), ("real_live", "live", "broadcast"), ("DEMO_V1", "short", "duration")]
+    for video_id, video_format, source in rows:
+        conn.execute("INSERT INTO videos (id, channel_id, title, published_at, format, format_source, text_refreshed_at, first_seen_at) VALUES (?, 'c', 't', ?, ?, ?, ?, ?)",
+                     (video_id, stamp, video_format, source, stamp, stamp))
+        conn.execute("INSERT INTO snapshots (video_id, captured_at, view_count) VALUES (?, ?, 5)", (video_id, stamp))
+    conn.commit()
+    assert migrate(conn) == ["002_video_format.sql"]
+    result = {r["id"]: (r["format"], r["format_source"]) for r in conn.execute("SELECT id, format, format_source FROM videos")}
+    assert result == {"real_curto": ("indeterminate", "duration"), "real_longo": ("long", "duration"), "real_live": ("live", "broadcast"), "DEMO_V1": ("short", "fictional")}
+    assert conn.execute("SELECT COUNT(*) FROM snapshots").fetchone()[0] == 4, "recriar a tabela não pode apagar snapshots"
+    assert conn.execute("PRAGMA foreign_keys").fetchone()[0] == 1
+    with pytest.raises(sqlite3.IntegrityError):
+        conn.execute("INSERT INTO snapshots (video_id, captured_at) VALUES ('nao-existe', ?)", (stamp,))
+    conn.close()

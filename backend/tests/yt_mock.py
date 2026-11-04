@@ -33,6 +33,7 @@ class FakeYouTube:
                     "thumbnails": {"medium": {"url": f"http://t/{vid}.jpg"}},
                 },
                 "contentDetails": {"duration": "PT45S" if is_short else "PT12M"},
+                "player": {"embedWidth": "405", "embedHeight": "720"} if is_short else {"embedWidth": "1280", "embedHeight": "720"},
                 "statistics": {"viewCount": str(1000 + index * 100), "likeCount": "10", "commentCount": "2"},
             }
         self.videos["vid00"]["statistics"]["viewCount"] = "50000"

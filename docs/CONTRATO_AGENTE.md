@@ -22,9 +22,12 @@ O REA 6.4 é uma ferramenta de engenharia reversa: analisa binários, apps e pá
 | Ler recomendações | `get_recommendations` | Registra contato |
 | Registrar recomendação | `submit_recommendation` | Sim |
 | Briefing do próximo vídeo | `get_next_briefing` | Registra contato |
+| Ver tarefas disponíveis | `list_available_tasks` | Só recupera prazos vencidos |
+| Ver quem atenderia cada etapa | `get_pipeline_plan` | Não: só descreve |
 | Pedir produção | `start_production` | Sim |
-| Assumir tarefa autorizada | `claim_job` | Sim |
+| Assumir tarefa autorizada (devolve o briefing) | `claim_job` | Sim |
 | Atualizar status e progresso | `update_progress` | Sim |
+| Gerar arquivo de teste (só tarefa simulada) | `write_test_result` | Sim |
 | Entregar arquivos | `deliver_artifacts` | Sim |
 | Registrar logs | `log_event` | Sim |
 | Registrar erro | `report_failure` | Sim |
@@ -45,7 +48,16 @@ awaiting_authorization ──(você autoriza)──► authorized ──(claim_j
 Qualquer estado aberto ──(você cancela)──► cancelled
 ```
 
-Não existe estado "publicado", e o banco recusa outro valor no pacote.
+Não existe estado "publicado", e o banco recusa outro valor no pacote. Cada tarefa traz `state_label`, por exemplo `NA FILA` ou `PRONTO PARA REVISÃO`.
+
+## Do painel ao agente
+
+1. Você cria ou escolhe a recomendação, gera os títulos e aprova o briefing com um deles.
+2. "Disponibilizar ao Claude Code" cria a tarefa simulada já autorizada, com o briefing anexado.
+3. O agente a encontra em `list_available_tasks` e recebe o briefing em `claim_job`.
+4. O painel se atualiza sozinho, a cada 3 s com tarefa ativa e a cada 20 s no resto.
+
+Cada tentativa fica em `job_attempts`, com agente, início, fim, resultado e erro. Avisos e erros aparecem como alertas no canal até você marcá-los como vistos.
 
 ## Garantias
 
@@ -63,8 +75,9 @@ Não existe estado "publicado", e o banco recusa outro valor no pacote.
 
 ## Arquivos
 
-- **Simulada:** só caminhos `simulado://`. Nenhum arquivo é lido ou gerado.
+- **Simulada:** caminhos `simulado://`, sem arquivo, ou o texto gerado por `write_test_result`, na pasta exclusiva da tarefa dentro da pasta de dados. Qualquer outro caminho é recusado.
 - **Real:** exige arquivo dentro de `YTI_ARTIFACT_ROOTS` (pastas separadas por `;`). O sistema confere a existência e grava tamanho e SHA-256.
+- **Download pelo painel:** sempre como anexo. Confere dono, pasta e SHA-256; arquivo alterado depois da entrega é recusado.
 
 ## Exemplo de sessão
 

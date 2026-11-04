@@ -24,7 +24,7 @@ powershell -ExecutionPolicy Bypass -File scripts\iniciar.ps1
 powershell -ExecutionPolicy Bypass -File scripts\parar.ps1
 ```
 
-Abra <http://127.0.0.1:3000/canais>. Ligado, o aplicativo usa cerca de 260 MB; desligado, nada. Detalhes em `docs/MEMORIA.md`. Depois de alterar o frontend, rode `npm run build` de novo.
+Abra <http://127.0.0.1:3000/canais>. Ligado, o painel usa cerca de 270 MB; desligado, nada. O servidor MCP não entra nesses scripts: o Claude Code o liga quando precisa. Detalhes em `docs/MEMORIA.md`. Depois de alterar o frontend, rode `npm run build` de novo.
 
 Para recriar os dados fictícios de pesquisa: `uv run python -m app.cli demo-reset`, na pasta `backend`. Isso não toca nos seus canais.
 
@@ -41,7 +41,9 @@ Na página de cada canal: visão geral, recomendações, fila, calendário, hist
 
 Abra o Claude Code nesta pasta e aprove o servidor `yti-producao` definido em `.mcp.json`. Depois, peça por exemplo: "use yti-producao para ler o briefing do canal X e propor três recomendações". O contrato completo está em `docs/CONTRATO_AGENTE.md`.
 
-O agente lê, propõe, pede produção e entrega arquivos. Autorizar é com você, na tela Fila de produção, e **não existe publicação**.
+O agente lê, propõe, pede produção e entrega arquivos. Autorizar é com você, no painel, e **não existe publicação**.
+
+**A produção ainda é simulada.** O ciclo completo foi testado com dados fictícios (`docs/RELATORIO_CICLO.md`); nenhum pipeline real está ligado. Para conectar o primeiro canal real, veja `docs/PRIMEIRO_CANAL_REAL.md`.
 
 ## Testes
 
@@ -53,6 +55,12 @@ npm run typecheck
 ```
 
 Os testes não acessam a rede: as APIs são simuladas.
+
+Para o ciclo completo, com navegador, MCP real, queda e reinício, use uma pasta vazia fora de `data/` e o frontend já compilado:
+
+```powershell
+uv run --directory backend --with playwright python ../scripts/teste_ciclo_completo.py --dados C:\temp\ciclo --saida ../docs/evidencias
+```
 
 ## Modo real
 
@@ -140,6 +148,9 @@ claude mcp add --transport http vidiq https://mcp.vidiq.com/mcp
 
 - [Arquitetura](ARQUITETURA.md)
 - [Plano](PLANO.md)
+- [Relatório do ciclo completo](docs/RELATORIO_CICLO.md)
+- [Primeiro canal real](docs/PRIMEIRO_CANAL_REAL.md)
+- [Pipelines existentes](docs/PIPELINES.md)
 - [Relatório da versão multicanal](docs/RELATORIO_MULTICANAL.md)
 - [Contrato do agente](docs/CONTRATO_AGENTE.md)
 - [Conformidade](docs/CONFORMIDADE.md)

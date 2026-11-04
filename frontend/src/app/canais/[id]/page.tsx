@@ -2,17 +2,19 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ActionForm } from "@/components/ActionForm";
-import { AuthPill, ChannelFields, ClaudePanel, JobCard, OriginPill } from "@/components/studio";
+import { AutoRefresh } from "@/components/AutoRefresh";
+import { AlertsBar, ChannelCockpit } from "@/components/ChannelCockpit";
+import { AuthPill, ChannelFields, JobCard, OriginPill } from "@/components/studio";
 import { Empty, PageHeader, Panel, Pill, SectionTitle, str } from "@/components/ui";
 import { duration, integer, shortDate } from "@/lib/format";
 import {
-  CALENDAR_STATUS, LANGUAGE_LABEL, studioGet, studioGetOrNull,
-  type CalendarEntry, type ChannelDetail, type Job, type Recommendation, type Source,
+  CALENDAR_STATUS, studioGet, studioGetOrNull,
+  type CalendarEntry, type ChannelDetail, type Cockpit, type Job, type PipelineInfo, type Recommendation, type Source,
 } from "@/lib/studio";
 
 import {
-  addCalendarEntry, addCompetitor, addHistory, deleteChannel, generateRecommendations, produceSimulated, removeItem,
-  setRecommendationStatus, updateAutomation, updateCalendarEntry, updateChannel,
+  addCalendarEntry, addCompetitor, addHistory, deleteChannel, generateRecommendations, generateTitles, produceSimulated, removeItem,
+  setRecommendationStatus, updateAutomation, updateCalendarEntry, updateChannel, updatePipelineProfile,
 } from "../actions";
 
 const TABS = [
@@ -59,6 +61,7 @@ const PRIORITY: Record<string, { label: string; tone: "ochre" | "info" | "neutra
   alta: { label: "Prioridade alta", tone: "ochre" }, media: { label: "Prioridade média", tone: "info" }, baixa: { label: "Prioridade baixa", tone: "neutral" },
 };
 const REC_STATUS: Record<string, string> = { nova: "Nova", aceita: "Aceita por você", descartada: "Descartada", em_producao: "Em produção", concluida: "Concluída" };
+const ORIGIN_LABEL: Record<string, string> = { agente: "Escrita por agente.", dono: "Escrita por você.", regras: "Rascunho por regras, para você editar." };
 
 function RecommendationCard({ item, canProduce }: { item: Recommendation; canProduce: boolean }) {
   const basis = BASIS[item.data_basis];
@@ -76,7 +79,14 @@ function RecommendationCard({ item, canProduce }: { item: Recommendation; canPro
       </div>
       <p className="mt-2 text-sm leading-relaxed text-ink-2">{item.justification}</p>
       <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-2 text-sm md:grid-cols-2">
-        <div><dt className="text-ink-3">Títulos sugeridos</dt><dd><ol className="list-decimal pl-4">{item.titles.map((title) => <li key={title}>{title}</li>)}</ol></dd></div>
+        <div>
+          <dt className="text-ink-3">Títulos sugeridos</dt>
+          <dd>
+            {item.titles.length ? <ol className="list-decimal pl-4">{item.titles.map((title) => <li key={title}>{title}</li>)}</ol> : (
+              ["nova", "aceita"].includes(item.status) && <ActionForm action={generateTitles} submit="Gerar três títulos" tone="quiet" pending="Gerando..." hidden={{ channel_id: item.channel_id, recommendation_id: item.id }} />
+            )}
+          </dd>
+        </div>
         <div><dt className="text-ink-3">Hook inicial</dt><dd>{item.hook}</dd></div>
         <div><dt className="text-ink-3">Ideia de thumbnail</dt><dd>{item.thumbnail_idea}</dd></div>
         <div><dt className="text-ink-3">Formato e duração</dt><dd>{item.format === "short" ? "Short" : "Vídeo longo"}, {duration(item.duration_seconds)}</dd></div>
@@ -85,7 +95,7 @@ function RecommendationCard({ item, canProduce }: { item: Recommendation; canPro
       </dl>
       <p className="mt-2 rounded-md bg-warn-soft px-2.5 py-1.5 text-[0.8125rem] text-warn">{item.facts_to_verify.join(" ")}</p>
       <div className="mt-3 flex flex-wrap items-start gap-2">
-        <span className="self-center text-[0.8125rem] text-ink-3">{item.origin === "agente" ? "Escrita por agente." : "Rascunho por regras, para você editar."}</span>
+        <span className="self-center text-[0.8125rem] text-ink-3">{ORIGIN_LABEL[item.origin]}</span>
         {item.status === "nova" && <ActionForm action={setRecommendationStatus} submit="Aceitar" tone="quiet" hidden={{ ...hidden, status: "aceita" }} />}
         {["nova", "aceita"].includes(item.status) && <ActionForm action={setRecommendationStatus} submit="Descartar" tone="quiet" hidden={{ ...hidden, status: "descartada" }} />}
         {item.status === "descartada" && <ActionForm action={setRecommendationStatus} submit="Reabrir" tone="quiet" hidden={{ ...hidden, status: "nova" }} />}
@@ -223,6 +233,32 @@ function AutomationPanel({ channel }: { channel: ChannelDetail }) {
   );
 }
 
+function PipelinePanel({ channel, pipeline }: { channel: ChannelDetail; pipeline: PipelineInfo }) {
+  return (
+    <Panel className="p-5">
+      <SectionTitle>Pipeline de produção</SectionTitle>
+      <p className="mt-0.5 mb-3 text-sm text-ink-2">Quem atenderia cada etapa. A execução real está desligada: perfis reais só descrevem o que seria feito.</p>
+      <ActionForm action={updatePipelineProfile} submit="Salvar pipeline" tone="quiet" doneMessage="Pipeline salvo." hidden={{ channel_id: channel.id }}>
+        <label className="mb-3 block text-[0.8125rem] text-ink-2">Perfil
+          <select name="pipeline_profile" defaultValue={channel.pipeline_profile} className="field mt-1 w-full">{pipeline.options.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}</select>
+        </label>
+      </ActionForm>
+      <ul className="mt-3 divide-y divide-line">
+        {pipeline.plan.stages.map((stage) => (
+          <li key={stage.stage} className="py-2 text-sm">
+            <div className="flex items-center justify-between gap-2"><span className="font-medium">{stage.label}</span>
+              {stage.simulated ? <Pill tone="warn">Simulado</Pill> : stage.adapter === "indefinido" ? <Pill>Sem caminho definido</Pill> : <Pill tone="info">Só descrito</Pill>}
+            </div>
+            {stage.command_preview && <p className="mt-0.5 break-all text-[0.8125rem] text-ink-2">{stage.command_preview}</p>}
+            {stage.project && <p className="break-all text-[0.8125rem] text-ink-3">{stage.project}{stage.project_found === false ? " (pasta não encontrada)" : ""}</p>}
+            {stage.notes && <p className="text-[0.8125rem] text-ink-3">{stage.notes}</p>}
+          </li>
+        ))}
+      </ul>
+    </Panel>
+  );
+}
+
 export default async function ChannelPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { id } = await params;
   const query = await searchParams;
@@ -231,10 +267,12 @@ export default async function ChannelPage({ params, searchParams }: { params: Pr
   const channel = await studioGetOrNull<ChannelDetail>(`/channels/${encoded}`);
   if (!channel) notFound();
   const bounds = monthBounds(str(query.m));
-  const [recommendations, jobs, calendar] = await Promise.all([
+  const [recommendations, jobs, calendar, cockpit, pipeline] = await Promise.all([
     studioGet<{ items: Recommendation[] }>(`/channels/${encoded}/recommendations`),
     studioGet<{ jobs: Job[] }>("/jobs", { channel_id: id }),
     studioGet<{ entries: CalendarEntry[] }>("/calendar", { start: bounds.start, end: bounds.end, channel_id: id }),
+    studioGet<Cockpit>(`/channels/${encoded}/cockpit`),
+    tab === "configuracoes" ? studioGet<PipelineInfo>(`/channels/${encoded}/pipeline`) : Promise.resolve(null),
   ]);
   const open = recommendations.items.filter((item) => ["nova", "aceita"].includes(item.status));
   const canProduce = channel.automation.auto_production !== "off";
@@ -250,46 +288,11 @@ export default async function ChannelPage({ params, searchParams }: { params: Pr
       <PageHeader title={channel.name} intro={channel.positioning || undefined}>
         <div className="flex flex-wrap items-center gap-2"><OriginPill isDemo={channel.is_demo} /><AuthPill auth={channel.youtube_auth} /></div>
       </PageHeader>
+      <AutoRefresh active={jobs.jobs.some((job) => ["authorized", "running", "delivered"].includes(job.state))} />
+      <AlertsBar channelId={channel.id} cockpit={cockpit} />
       <Tabs channelId={channel.id} current={tab} counts={{ recomendacoes: open.length, fila: activeJobs.length, historico: channel.history.length, concorrentes: channel.competitors.length }} />
 
-      {tab === "visao" && (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.4fr_1fr]">
-          <div className="space-y-4">
-            <Panel className="p-5">
-              <SectionTitle>Contexto estratégico</SectionTitle>
-              <dl className="mt-2 grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-                <div><dt className="text-ink-3">Nicho</dt><dd>{channel.niche || "Não definido"}</dd></div>
-                <div><dt className="text-ink-3">Idioma e país</dt><dd>{[LANGUAGE_LABEL[channel.language] ?? channel.language, channel.country].filter(Boolean).join(", ")}</dd></div>
-                <div><dt className="text-ink-3">Público</dt><dd>{channel.audience || "Não definido"}</dd></div>
-                <div><dt className="text-ink-3">Tom de voz</dt><dd>{channel.tone || "Não definido"}</dd></div>
-                <div><dt className="text-ink-3">Formatos</dt><dd>{channel.formats.map((f) => (f === "short" ? `Shorts de ${duration(channel.short_target_seconds)}` : `Longos de ${duration(channel.long_target_seconds)}`)).join("; ")}</dd></div>
-                <div><dt className="text-ink-3">Ritmo planejado</dt><dd>{channel.cadence_per_week ? `${channel.cadence_per_week} por semana` : "Não definido"}</dd></div>
-                <div className="sm:col-span-2"><dt className="text-ink-3">Palavras do perfil</dt><dd>{channel.keywords.join(", ") || "Nenhuma"}</dd></div>
-                <div className="sm:col-span-2"><dt className="text-ink-3">Temas a evitar</dt><dd>{channel.avoid.join(", ") || "Nenhum"}</dd></div>
-              </dl>
-            </Panel>
-            <section>
-              <h2 className="mb-2 font-display text-[1.1875rem] font-semibold">Próxima recomendação</h2>
-              {open[0] ? <RecommendationCard item={open[0]} canProduce={canProduce} /> : (
-                <Panel><Empty title="Nenhuma recomendação aberta."><Link href={`/canais/${channel.id}?aba=recomendacoes`} className="text-cobalt underline">Gerar recomendações</Link></Empty></Panel>
-              )}
-            </section>
-          </div>
-          <div className="space-y-4">
-            <Panel className="p-4">
-              <SectionTitle>YouTube</SectionTitle>
-              <p className="mt-2 text-sm"><AuthPill auth={channel.youtube_auth} /></p>
-              <p className="mt-1.5 text-sm text-ink-2">{channel.youtube_auth.detail}</p>
-            </Panel>
-            <Panel className="p-4"><ClaudePanel claude={channel.claude} /></Panel>
-            <Panel className="p-4">
-              <SectionTitle>Em andamento</SectionTitle>
-              {activeJobs.length ? <ul className="mt-2 space-y-1 text-sm">{activeJobs.slice(0, 4).map((job) => <li key={job.id}><Link className="text-cobalt underline underline-offset-2" href={`/canais/${channel.id}/tarefas/${job.id}`}>{job.title}</Link></li>)}</ul> : <p className="mt-2 text-sm text-ink-3">Nenhuma tarefa ativa.</p>}
-              {channel.next_scheduled && <p className="mt-2 text-sm text-ink-2">Próxima publicação planejada: {channel.next_scheduled.title}, {day(channel.next_scheduled.scheduled_on)}.</p>}
-            </Panel>
-          </div>
-        </div>
-      )}
+      {tab === "visao" && <ChannelCockpit channel={channel} cockpit={cockpit} />}
 
       {tab === "recomendacoes" && (
         <>
@@ -397,6 +400,7 @@ export default async function ChannelPage({ params, searchParams }: { params: Pr
           </Panel>
           <div className="space-y-4">
             <AutomationPanel channel={channel} />
+            {pipeline && <PipelinePanel channel={channel} pipeline={pipeline} />}
             <Panel className="border-bad/30 p-5">
               <SectionTitle>Remover canal</SectionTitle>
               <p className="mt-1 mb-3 text-sm text-ink-2">Apaga perfil, recomendações, calendário, histórico e tarefas deste canal aqui. Nada muda no YouTube.</p>

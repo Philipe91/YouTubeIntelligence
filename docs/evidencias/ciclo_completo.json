@@ -1,0 +1,128 @@
+{
+ "passos": [
+  {
+   "passo": "1. Canal selecionado no painel",
+   "canal": "chn_demo_imperios"
+  },
+  {
+   "passo": "2. Recomendação criada",
+   "assunto": "Puente de barcas de Jerjes"
+  },
+  {
+   "passo": "3. Três títulos gerados",
+   "titulos": [
+    "Puente de barcas de Jerjes: la historia poco contada",
+    "Puente de barcas de Jerjes: lo que casi nadie explica",
+    "Puente de barcas de Jerjes: por qué sigue importando"
+   ]
+  },
+  {
+   "passo": "4. Título escolhido e briefing aprovado",
+   "titulo": "Puente de barcas de Jerjes: lo que casi nadie explica"
+  },
+  {
+   "passo": "5. Tarefa disponível pelo MCP",
+   "job_id": "job_089f8c0e72a54151",
+   "estado": "NA FILA"
+  },
+  {
+   "passo": "6. Agente assumiu; execução duplicada recusada",
+   "repeticao_mesma_chave": "devolveu a mesma resposta",
+   "segundo_agente": "job_not_claimable",
+   "painel": "atualizou sozinho"
+  },
+  {
+   "passo": "7. Falha registrada, alerta visto no painel, tarefa retomada",
+   "tentativa": 2
+  },
+  {
+   "passo": "8. Queda no meio da tarefa: estado preservado",
+   "processos_mcp_mortos": 2,
+   "estado_no_banco": [
+    "running",
+    40,
+    2
+   ]
+  },
+  {
+   "passo": "9. Recuperação: prazo vencido, outro agente assumiu, token antigo barrado",
+   "erro_do_agente_antigo": "lease_lost",
+   "tentativa": 3
+  },
+  {
+   "passo": "10. Produção simulada e arquivo de teste gerado",
+   "arquivo": "resultado_teste.txt",
+   "sha256": "c06dbe8672cd2c334cd021b97bac7c56635180f233a7f0796d6a8f3089bb6d65",
+   "tamanho_bytes": 190
+  },
+  {
+   "passo": "11. Finalizada como PRONTO PARA REVISÃO",
+   "publicado": false
+  },
+  {
+   "passo": "12. Arquivo baixado pelo painel, com o mesmo SHA-256",
+   "nome": "resultado_teste.txt"
+  },
+  {
+   "passo": "13. Consistente depois de reiniciar",
+   "historico": [
+    [
+     1,
+     "agente-teste-A",
+     "falhou"
+    ],
+    [
+     2,
+     "agente-teste-A",
+     "prazo_vencido"
+    ],
+    [
+     3,
+     "agente-teste-B",
+     "entregue"
+    ]
+   ],
+   "arquivo": "baixado de novo, mesmo SHA-256",
+   "calendario": "pronto_para_revisao"
+  },
+  {
+   "passo": "14. Isolamento entre canais confirmado"
+  },
+  {
+   "passo": "15. Sem publicação: nenhuma ferramenta ou botão, nenhuma chamada à API do YouTube",
+   "ferramentas_mcp": 17,
+   "chamadas_youtube": 0
+  },
+  {
+   "passo": "16. Botões do painel testados, um a um, com efeito no backend",
+   "botoes": [
+    "Aceitar",
+    "Adicionar ao calendário",
+    "Associar concorrente",
+    "Autorizar simulação",
+    "Avançar simulação",
+    "Cadastrar canal",
+    "Cancelar",
+    "Descartar",
+    "Enviar para produção simulada",
+    "Gerar recomendações",
+    "Marcar como visto",
+    "Reabrir",
+    "Registrar vídeo",
+    "Remover",
+    "Remover canal",
+    "Salvar",
+    "Salvar automação",
+    "Salvar perfil",
+    "Salvar pipeline",
+    "Simular falha"
+   ]
+  },
+  {
+   "passo": "17. Sem estouro horizontal em 390 e 768 px"
+  },
+  {
+   "passo": "Sem erros de JavaScript no navegador"
+  }
+ ]
+}

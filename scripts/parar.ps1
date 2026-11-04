@@ -1,6 +1,7 @@
 # Desliga o que o iniciar.ps1 ligou, incluindo processos filhos. Não apaga dados.
 $root = Split-Path -Parent $PSScriptRoot
-$pids = Join-Path $root 'data\processos.txt'
+$dados = if ($env:YTI_DATA_DIR) { $env:YTI_DATA_DIR } else { Join-Path $root 'data' }
+$pids = Join-Path $dados 'processos.txt'
 if (-not (Test-Path $pids)) { 'Nada para desligar.'; return }
 
 $all = Get-CimInstance Win32_Process

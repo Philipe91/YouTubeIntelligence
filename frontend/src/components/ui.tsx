@@ -25,7 +25,7 @@ export function Panel({ children, className = "" }: { children: ReactNode; class
 }
 
 /** Abas de formato. Shorts e longos nunca aparecem na mesma lista. */
-export function FormatTabs({ current, basePath, params = {} }: { current: string; basePath: string; params?: Record<string, string | undefined> }) {
+export function FormatTabs({ current, basePath, params = {}, withIndeterminate = false }: { current: string; basePath: string; params?: Record<string, string | undefined>; withIndeterminate?: boolean }) {
   const href = (format: string) => {
     const query = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) if (value) query.set(key, value);
@@ -34,7 +34,7 @@ export function FormatTabs({ current, basePath, params = {} }: { current: string
   };
   return (
     <div role="group" aria-label="Formato" className="inline-flex rounded-md border border-line bg-surface p-0.5">
-      {[{ key: "short", label: "Shorts" }, { key: "long", label: "Vídeos longos" }].map((tab) => (
+      {[{ key: "short", label: "Shorts" }, { key: "long", label: "Vídeos longos" }, ...(withIndeterminate ? [{ key: "indeterminate", label: "Indeterminados" }] : [])].map((tab) => (
         <Link
           key={tab.key}
           href={href(tab.key)}

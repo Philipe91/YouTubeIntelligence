@@ -53,7 +53,7 @@ export const OUTLIER_STATUS_LABEL: Record<string, string> = {
   insufficient_sample: "Amostra insuficiente",
   too_young: "Vídeo muito novo",
   no_views: "Sem views",
-  unknown_format: "Formato desconhecido",
+  unknown_format: "Fora das comparações",
 };
 
 export const FLAG_LABEL: Record<string, string> = {
@@ -66,4 +66,4 @@ export const FLAG_LABEL: Record<string, string> = {
   mediana_zero: "mediana dos pares é zero",
 };
 
-export const FORMAT_LABEL: Record<string, string> = { short: "Shorts", long: "Longos", live: "Lives", unknown: "Desconhecido" };
+export const FORMAT_LABEL: Record<string, string> = { short: "Shorts", long: "Longos", live: "Lives", indeterminate: "INDETERMINADO", unknown: "Desconhecido" };

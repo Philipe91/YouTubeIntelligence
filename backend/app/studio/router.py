@@ -8,7 +8,7 @@ from datetime import date, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
 from .. import demo
@@ -16,7 +16,7 @@ from ..config import Settings
 from ..db import connect, migrate, utcnow
 from ..deps import settings_dep
 from ..policy import policy_state
-from . import recommend, simulator, status, store
+from . import pipelines, recommend, simulator, status, store
 from .contract import Contract
 
 router = APIRouter(prefix="/api/studio")
@@ -223,6 +223,79 @@ class StartBody(BaseModel):
 def produce(channel_id: str, recommendation_id: str, body: StartBody, conn=Depends(studio_conn), settings=Depends(_settings)):
     # Pedido humano pela interface. Mesmo assim, tarefa real fica aguardando autorização explícita.
     return Contract(conn, settings).start_production(channel_id, recommendation_id, body.idempotency_key or uuid.uuid4().hex, "dono_local", body.simulated)
+
+
+class OwnerRecommendationBody(BaseModel):
+    subject: str
+    justification: str
+    format: str
+    duration_seconds: int | None = None
+    target_audience: str = ""
+    editorial_priority: str = "media"
+
+
+@router.post("/channels/{channel_id}/recommendations", status_code=201)
+def create_recommendation(channel_id: str, body: OwnerRecommendationBody, conn=Depends(studio_conn)):
+    return recommend.create_owner_recommendation(conn, channel_id, subject=body.subject, justification=body.justification, video_format=body.format,
+                                                 duration_seconds=body.duration_seconds, target_audience=body.target_audience, priority=body.editorial_priority)
+
+
+@router.post("/channels/{channel_id}/recommendations/{recommendation_id}/titles")
+def generate_titles(channel_id: str, recommendation_id: str, conn=Depends(studio_conn)):
+    return recommend.generate_titles(conn, channel_id, recommendation_id)
+
+
+class BriefingBody(BaseModel):
+    chosen_title: str
+    planned_on: str | None = None
+
+
+@router.post("/channels/{channel_id}/recommendations/{recommendation_id}/briefing", status_code=201)
+def approve_briefing(channel_id: str, recommendation_id: str, body: BriefingBody, conn=Depends(studio_conn)):
+    return recommend.approve_briefing(conn, channel_id, recommendation_id, body.chosen_title, body.planned_on)
+
+
+class DispatchBody(BaseModel):
+    idempotency_key: str
+
+
+@router.post("/channels/{channel_id}/briefings/{briefing_id}/dispatch", status_code=201)
+def dispatch(channel_id: str, briefing_id: str, body: DispatchBody, conn=Depends(studio_conn), settings=Depends(_settings)):
+    return Contract(conn, settings).dispatch_briefing(channel_id, briefing_id, body.idempotency_key)
+
+
+@router.get("/channels/{channel_id}/cockpit")
+def cockpit(channel_id: str, conn=Depends(studio_conn), settings=Depends(_settings)):
+    contract = Contract(conn, settings)
+    data = contract.channel_cockpit(channel_id)
+    today = date.today()
+    open_items = store.list_recommendations(conn, channel_id, "aceita") + store.list_recommendations(conn, channel_id, "nova")
+    upcoming = store.list_calendar(conn, channel_id, today.isoformat(), (today + timedelta(days=60)).isoformat())
+    next_item = open_items[0] if open_items else None
+    briefing = None
+    if next_item:
+        row = conn.execute("SELECT * FROM briefings WHERE recommendation_id = ?", (next_item["id"],)).fetchone()
+        briefing = recommend.briefing_view(row)
+    return {**data, "next_recommendation": next_item, "briefing": briefing,
+            "upcoming": [e for e in upcoming if e["status"] != "cancelado"][:6]}
+
+
+@router.post("/channels/{channel_id}/alerts/{event_id}/acknowledge")
+def acknowledge(channel_id: str, event_id: int, conn=Depends(studio_conn), settings=Depends(_settings)):
+    return Contract(conn, settings).acknowledge_alert(channel_id, event_id)
+
+
+@router.get("/channels/{channel_id}/pipeline")
+def pipeline(channel_id: str, conn=Depends(studio_conn)):
+    channel = store.get_channel(conn, channel_id)
+    return {"plan": pipelines.plan_for(channel["pipeline_profile"], "", channel_id), "options": pipelines.profile_options()}
+
+
+@router.get("/channels/{channel_id}/jobs/{job_id}/artifacts/{artifact_id}")
+def download_artifact(channel_id: str, job_id: str, artifact_id: str, conn=Depends(studio_conn), settings=Depends(_settings)):
+    path, name = Contract(conn, settings).artifact_file(channel_id, job_id, artifact_id)
+    # Sempre como download: o conteúdo do arquivo nunca é interpretado pelo navegador.
+    return FileResponse(path, media_type="application/octet-stream", filename=name, headers={"X-Content-Type-Options": "nosniff"})
 
 
 @router.get("/calendar")

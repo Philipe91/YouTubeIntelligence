@@ -1,16 +1,17 @@
-"""Agente simulado: percorre o contrato sem renderizar nada e sem gerar arquivos.
+"""Agente simulado: percorre o contrato usando os adaptadores simulados.
 
-Cada chamada avança uma etapa, de propósito leve. Recusa tarefas reais.
+Cada chamada avança uma etapa, de propósito leve: nada é renderizado. Gera só um arquivo de texto
+de teste na pasta da tarefa. Recusa tarefas reais.
 """
 from __future__ import annotations
 
 import json
 
 from .contract import SIMULATED_PREFIX, Contract
+from .pipelines import STAGES, StageRequest, SimulatedAdapter
 from .store import StudioError
 
 AGENT_ID = "agente_simulado"
-STEPS = [(20, "Roteiro"), (40, "Narração"), (60, "Animação"), (80, "Render"), (100, "Revisão de qualidade")]
 
 
 def _require_simulated(contract: Contract, job_id: str, channel_id: str):
@@ -29,12 +30,16 @@ def simulate_step(contract: Contract, job_id: str, channel_id: str) -> dict:
         return contract.get_job(job_id)
     if job["state"] == "running":
         token = job["lease_token"]
-        following = next((step for step in STEPS if step[0] > job["progress"]), None)
+        following = next((stage for stage in STAGES if stage[2] > job["progress"]), None)
         if following:
-            contract.update_progress(job_id, token, following[0], following[1], f"sim:{job_id}:{attempt}:{following[0]}")
+            key, label, progress = following
+            SimulatedAdapter().run(StageRequest(job_id, channel_id, key))
+            contract.update_progress(job_id, token, progress, label, f"sim:{job_id}:{attempt}:{progress}")
             return contract.get_job(job_id)
+        result = contract.write_test_result(job_id, token, "Resultado gerado pelo agente simulado do painel.", f"sim:{job_id}:{attempt}:result")
         contract.deliver_artifacts(job_id, token, [
-            {"kind": job["format"] if job["format"] in {"short"} else "video", "path": f"{SIMULATED_PREFIX}{job_id}/video.mp4", "label": "Vídeo simulado"},
+            {"kind": "other", "path": result["path"], "label": "Resultado de teste (arquivo real de texto)"},
+            {"kind": job["format"] if job["format"] == "short" else "video", "path": f"{SIMULATED_PREFIX}{job_id}/video.mp4", "label": "Vídeo simulado"},
             {"kind": "thumbnail", "path": f"{SIMULATED_PREFIX}{job_id}/thumbnail.png", "label": "Thumbnail simulada"},
         ], f"sim:{job_id}:{attempt}:deliver")
         return contract.get_job(job_id)
@@ -42,8 +47,9 @@ def simulate_step(contract: Contract, job_id: str, channel_id: str) -> dict:
         rows = contract.conn.execute("SELECT id, kind FROM job_artifacts WHERE job_id = ?", (job_id,)).fetchall()
         video = next(r["id"] for r in rows if r["kind"] in {"video", "short"})
         thumb = next((r["id"] for r in rows if r["kind"] == "thumbnail"), None)
-        recommendation = contract.conn.execute("SELECT titles_json, justification FROM recommendations WHERE id = ?", (job["recommendation_id"],)).fetchone()
-        title = json.loads(recommendation["titles_json"])[0] if recommendation else job["title"]
+        recommendation = contract.conn.execute("SELECT titles_json FROM recommendations WHERE id = ?", (job["recommendation_id"],)).fetchone()
+        titles = json.loads(recommendation["titles_json"]) if recommendation else []
+        title = job["title"] if job["briefing_id"] or not titles else titles[0]
         contract.prepare_publish_package(job_id, title[:100], "Descrição simulada para revisão. Nada será enviado ao YouTube.", ["simulacao"], video,
                                          f"sim:{job_id}:{attempt}:package", thumbnail_artifact_id=thumb, agent_id=AGENT_ID)
         return contract.get_job(job_id)

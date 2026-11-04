@@ -52,7 +52,7 @@ def handle_studio_error(_request, error: StudioError):
     return studio_router.studio_error_response(error)
 
 
-FormatParam = Query(default=None, pattern="^(short|long|live)$")
+FormatParam = Query(default=None, pattern="^(short|long|live|indeterminate)$")
 
 
 @app.get("/api/overview")

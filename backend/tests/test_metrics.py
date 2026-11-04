@@ -373,7 +373,7 @@ def test_parse_duration(value, expected):
 
 
 def test_classify_format_labels_source():
-    assert classify_format(60, 180) == ("short", "duration")
+    assert classify_format(60, 180) == ("indeterminate", "duration")
     assert classify_format(181, 180) == ("long", "duration")
     assert classify_format(600, 180, analytics_content_type="SHORTS") == ("short", "analytics")
     assert classify_format(600, 180, has_live_details=True) == ("live", "broadcast")

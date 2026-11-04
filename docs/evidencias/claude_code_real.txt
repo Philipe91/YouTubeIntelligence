@@ -1,0 +1,21 @@
+Teste com o Claude Code real (modelo claude-haiku-5-5), pelo servidor MCP de .mcp.json, em pasta de dados de teste.
+
+== Resposta do Claude ==
+- **Estado final:** PRONTO PARA REVISÃO (`package_ready`, pacote `pkg_a13e029798104e57`, sem publicação).
+- **Tentativa:** 1 de 3, sem erros registrados.
+- **Ferramenta de publicar:** não existe. O contrato só prepara o pacote para revisão humana, e `published` veio `false`.
+- **Pendência:** o pacote ficou sem thumbnail, porque nenhum artefato de thumbnail foi entregue.
+
+== Conferência independente, direto no banco ==
+estado: package_ready | PRONTO PARA REVISÃO | progresso: 100
+tentativas: [(1, 'claude-code-real', 'entregue')]
+eventos: ['Tarefa simulada criada por dono_local.', 'Disponível ao Claude Code. Aguardando um agente assumir.', 'Tentativa 1 assumida por claude-code-real.', '20% Roteiro', '40% Narracao', '60% Animacao', '80% Renderizacao', '100% Thumbnail', 'Arquivo de resultado de teste gerado.', '2 arquivos entregues.', 'Pacote pronto para revisão humana. Nada foi publicado.']
+ARQUIVO DE TESTE. NÃO É UM VÍDEO E NÃO DEVE SER PUBLICADO.
+Tarefa: job_d17dffa1747e4e64
+Tentativa: 1
+
+Teste fictício com claude-code-real. Assumi a tarefa job_d17dffa1747e4e64 (canal chn_demo_rotas), registrei progresso nas etapas Roteiro (20), Narração (40), Animação (60), Renderização (80) e Thumbnail (100). Nenhum arquivo real foi produzido e nada foi publicado.
+
+arquivo: other resultado_teste.txt | existe=True | hash confere=True
+arquivo: video video.mp4
+pacote: {"title": "Faróis da rota do Cabo, teste fictício final: a história pouco contada", "state": "ready_for_human_review", "tags": ["teste"]}

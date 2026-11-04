@@ -62,6 +62,8 @@ def upsert_video(conn: sqlite3.Connection, item: dict, now: datetime, settings: 
         published_at=snippet.get("publishedAt"),
         short_cutoff=format_config["three_minute_shorts_since"],
         legacy_short_max_seconds=format_config["legacy_short_max_seconds"],
+        embed_width=item.get("player", {}).get("embedWidth"),
+        embed_height=item.get("player", {}).get("embedHeight"),
     )
     stamp = to_iso(now)
     language = snippet.get("defaultAudioLanguage") or snippet.get("defaultLanguage")
