@@ -111,7 +111,7 @@ def test_favorites_saved_searches_and_terms_feed_ideas_with_verifiable_links(dem
     assert "cerco de numância" in subjects and "muralhas de adriano" in subjects
     assert subjects["muralhas de adriano"]["sources"][0]["url"] == f"/pesquisa/{run['id']}"
     assert subjects["cerco de numância"]["sources"][0]["url"].startswith("/palavras?termo=")
-    assert subjects["história de roma animada"]["sources"][0]["kind"] == "analytics"
+    assert subjects["a história de roma"]["sources"][0]["kind"] == "analytics"
 
 
 def test_ideas_respect_avoid_list(demo_db, studio, demo_cfg):
@@ -124,7 +124,7 @@ def test_idea_equal_to_collected_title_is_discarded(demo_db, studio, demo_cfg):
     keywords.add_favorite(studio, "chn_demo_rotas", "tema copiado", "", utcnow())
     studio.execute("UPDATE managed_channels SET topic_backlog_json = '[]', keywords_json = '[]', language = 'pt' WHERE id = 'chn_demo_rotas'")
     studio.commit()
-    demo_db.execute("UPDATE videos SET title = 'Tema copiado: a história pouco contada' WHERE id = (SELECT id FROM videos LIMIT 1)")
+    demo_db.execute("UPDATE videos SET title = 'Tema copiado: do começo ao fim' WHERE id = (SELECT id FROM videos LIMIT 1)")
     demo_db.commit()
     result = ideas.generate(demo_db, studio, demo_cfg, "chn_demo_rotas", utcnow())
     assert result["skipped_copies"] == 1

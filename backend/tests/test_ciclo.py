@@ -73,7 +73,7 @@ def test_owner_recommendation_starts_without_titles_then_gets_three(db):
     rec = owner_rec(db, ch["id"])
     assert rec["origin"] == "dono" and rec["titles"] == [] and rec["data_basis"] == "editorial"
     done = recommend.generate_titles(db, ch["id"], rec["id"])
-    assert len(done["titles"]) == 3 and all("A ponte de barcos de Xerxes" in title for title in done["titles"])
+    assert len(done["titles"]) == 3 and all("ponte de barcos de Xerxes" in title for title in done["titles"])
 
 
 @pytest.mark.parametrize("fields,code", [
@@ -410,7 +410,7 @@ def test_studio_migration_preserves_recommendations_and_jobs(tmp_path):
                     VALUES ('j', 'c', 'r', 't', 'long', 1, 'running', 'a', ?, ?)""", (stamp, stamp))
     conn.execute("INSERT INTO job_events (job_id, at, level, kind, message) VALUES ('j', ?, 'info', 'state', 'm')", (stamp,))
     conn.commit()
-    assert migrate(conn, store.MIGRATIONS) == ["002_briefing_execucoes.sql", "003_producao_real.sql", "004_inteligencia.sql"]
+    assert migrate(conn, store.MIGRATIONS) == ["002_briefing_execucoes.sql", "003_producao_real.sql", "004_inteligencia.sql", "005_titulos.sql"]
     assert conn.execute("SELECT recommendation_id FROM production_jobs").fetchone()[0] == "r", "recriar a tabela não pode soltar a tarefa"
     assert conn.execute("SELECT COUNT(*) FROM job_events").fetchone()[0] == 1
     assert conn.execute("SELECT pipeline_profile FROM managed_channels").fetchone()[0] == "simulado"

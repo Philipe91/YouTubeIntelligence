@@ -59,6 +59,10 @@ export async function deleteRun(previous: ActionState, data: FormData): Promise<
   redirect("/pesquisa?aba=historico");
 }
 
+export async function requestAiTitles(previous: ActionState, data: FormData): Promise<ActionState> {
+  return done(previous, await intelWrite(`/channels/${seg(text(data, "channel_id"))}/lab/projects/${seg(text(data, "project_id"))}/ai-titles`), "/lab");
+}
+
 // --- Descoberta para canais dark ------------------------------------------------------------------
 
 export async function runDiscovery(previous: ActionState, data: FormData): Promise<ActionState> {

@@ -4,11 +4,11 @@ import { ActionForm } from "@/components/ActionForm";
 import { Empty, PageHeader, Panel, Pill, SectionTitle, str } from "@/components/ui";
 import { Notice, Pagination } from "@/components/intel";
 import { dateTime } from "@/lib/format";
-import { intelGet, intelGetOrNull, type ImageEval, type LabCriterion, type LabProject, type LabProjects, type LabVariation, type TitleEval } from "@/lib/intel";
+import { intelGet, intelGetOrNull, type CoachStatus, type ImageEval, type LabCriterion, type LabProject, type LabProjects, type LabVariation, type TitleEval } from "@/lib/intel";
 import { studioGet, type StudioOverview } from "@/lib/studio";
 
 import {
-  addLabVariation, attachLabImage, createLabProject, deleteLabProject, deleteLabVariation, updateLabVariation,
+  addLabVariation, attachLabImage, createLabProject, deleteLabProject, deleteLabVariation, requestAiTitles, updateLabVariation,
 } from "../intel-actions";
 
 function Criteria({ items }: { items: LabCriterion[] }) {
@@ -110,7 +110,7 @@ function VariationCard({ variation, channel, channelName }: { variation: LabVari
   );
 }
 
-function ProjectView({ data, channel }: { data: LabProject; channel: string }) {
+function ProjectView({ data, channel, isAi }: { data: LabProject; channel: string; isAi: boolean }) {
   const projectHidden = { channel_id: channel, project_id: data.project.id };
   const compared = data.variations.filter((v) => v.title_eval);
   return (
@@ -157,11 +157,15 @@ function ProjectView({ data, channel }: { data: LabProject; channel: string }) {
           </Panel>
           <Panel className="p-4">
             <SectionTitle>Alternativas de título</SectionTitle>
-            <p className="mt-0.5 text-[0.8125rem] text-ink-3">Modelos de texto, no idioma do canal. Títulos iguais a vídeos coletados ficam de fora.</p>
+            <p className="mt-0.5 text-[0.8125rem] text-ink-3">Três ângulos por regras, sem IA, revisados no idioma do canal. Títulos iguais a vídeos coletados são trocados. {data.titles_note}</p>
+            {isAi && (
+              <div className="mt-3"><ActionForm action={requestAiTitles} submit="Pedir títulos ao Claude" pending="Escrevendo..." tone="quiet" hidden={projectHidden} doneMessage="Títulos salvos nas variações." /><p className="mt-1 text-[0.75rem] text-ink-3">Tem custo, registrado pelo provedor. Passa pela mesma revisão.</p></div>
+            )}
             <ul className="mt-3 divide-y divide-line">
               {data.suggestions.map((item) => (
                 <li key={item.title} className="py-2">
                   <p className="text-sm">{item.title}</p>
+                  <p className="mt-0.5 text-[0.8125rem] text-ink-3"><span className="font-medium text-ink-2">{item.angle_label}.</span> {item.why}</p>
                   <div className="mt-1 flex items-center justify-between gap-2">
                     <span className="text-[0.75rem] text-ink-3">Revisão {item.review_score} de 100, {item.characters} caracteres</span>
                     <ActionForm action={addLabVariation} submit="Guardar título" tone="quiet" hidden={{ ...projectHidden, title: item.title }} />
@@ -178,7 +182,7 @@ function ProjectView({ data, channel }: { data: LabProject; channel: string }) {
 
 export default async function Lab({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const params = await searchParams;
-  const overview = await studioGet<StudioOverview>("/overview");
+  const [overview, coachStatus] = await Promise.all([studioGet<StudioOverview>("/overview"), intelGet<CoachStatus>("/coach/status")]);
   const canal = str(params.canal);
   const channel = overview.channels.find((c) => c.id === canal) ?? overview.channels[0];
   if (!channel) {
@@ -197,7 +201,7 @@ export default async function Lab({ searchParams }: { searchParams: Promise<Reco
         <button className="min-h-9 rounded-md border border-line bg-surface px-3 text-sm hover:bg-page">Aplicar</button>
       </form>
       {projectId && !project && <Panel><Empty title="Projeto não encontrado neste canal."><Link className="text-cobalt underline" href={`/lab?canal=${channel.id}`}>Ver os projetos deste canal</Link></Empty></Panel>}
-      {project && <ProjectView data={project} channel={channel.id} />}
+      {project && <ProjectView data={project} channel={channel.id} isAi={coachStatus.is_ai} />}
       {list && (
         <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
           <Panel>

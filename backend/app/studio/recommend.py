@@ -19,6 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from .. import services
 from ..config import Settings
 from ..db import to_iso, utcnow
+from ..intel.titles import build_titles, natural_subject
 from ..metrics.opportunity import Opportunity
 from ..metrics.text import normalize, tokens
 from ..policy import policy_state
@@ -29,7 +30,6 @@ FACTS_DEFAULT = "Confirme datas, nomes e afirmações em fontes confiáveis ante
 
 TEMPLATES = {
     "pt": {
-        "titles": ["{s}: a história pouco contada", "{s}: o que quase ninguém explica", "{s}: por que isso importa até hoje"],
         "thumb": "Uma única cena sobre \"{s}\", com um personagem em destaque e no máximo três palavras na imagem.",
         "tone": "Tom",
         "hook": "Abra com a pergunta mais concreta sobre \"{s}\" e responda só no fim do vídeo.",
@@ -38,7 +38,6 @@ TEMPLATES = {
         "fit": "Combina com o posicionamento: {p}",
     },
     "es": {
-        "titles": ["{s}: la historia poco contada", "{s}: lo que casi nadie explica", "{s}: por qué sigue importando"],
         "thumb": "Una sola escena sobre \"{s}\", con un personaje destacado y un máximo de tres palabras.",
         "tone": "Tono",
         "hook": "Abre con la pregunta más concreta sobre \"{s}\" y respóndela solo al final.",
@@ -47,7 +46,6 @@ TEMPLATES = {
         "fit": "Encaja con el posicionamiento: {p}",
     },
     "en": {
-        "titles": ["{s}: the untold story", "{s}: what almost nobody explains", "{s}: why it still matters"],
         "thumb": "A single scene about \"{s}\", one character in focus, three words at most.",
         "tone": "Tone",
         "hook": "Open with the most concrete question about \"{s}\" and answer it only at the end.",
@@ -82,19 +80,25 @@ def _covered_text(channel_history: list[dict]) -> set[str]:
     return covered
 
 
+def title_options(channel: dict, subject: str, video_format: str) -> list[dict]:
+    """Três alternativas revisadas, no idioma do canal. Assunto que a revisão não aceita volta com menos."""
+    return build_titles(subject, channel["language"], video_format, channel.get("niche"), avoid=channel.get("avoid"))
+
+
 def _insert(conn: sqlite3.Connection, channel: dict, *, subject: str, justification: str, sources: list[dict], titles: list[str],
             thumbnail_idea: str, hook: str, video_format: str, duration_seconds: int, target_audience: str, priority: str,
-            facts: list[str], data_basis: str, origin: str) -> dict | None:
+            facts: list[str], data_basis: str, origin: str, options: list[dict] | None = None) -> dict | None:
     identifier = new_id("rec")
     stamp = to_iso(utcnow())
     cursor = conn.execute(
         """INSERT OR IGNORE INTO recommendations (id, channel_id, dedupe_key, subject, justification, sources_json, titles_json,
                thumbnail_idea, hook, format, duration_seconds, target_audience, editorial_priority, facts_to_verify_json,
-               data_basis, origin, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+               data_basis, origin, created_at, updated_at, title_options_json)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (identifier, channel["id"], dedupe_key(subject, video_format), subject, justification,
          json.dumps(sources, ensure_ascii=False), json.dumps(titles, ensure_ascii=False), thumbnail_idea, hook, video_format,
-         duration_seconds, target_audience, priority, json.dumps(facts, ensure_ascii=False), data_basis, origin, stamp, stamp),
+         duration_seconds, target_audience, priority, json.dumps(facts, ensure_ascii=False), data_basis, origin, stamp, stamp,
+         json.dumps(options, ensure_ascii=False) if options else None),
     )
     if cursor.rowcount == 0:
         return None
@@ -103,13 +107,16 @@ def _insert(conn: sqlite3.Connection, channel: dict, *, subject: str, justificat
 
 def _from_template(conn, channel, subject, reasons, sources, video_format, priority, data_basis) -> dict | None:
     text = _text(channel["language"])
-    subject = subject[:1].upper() + subject[1:]
+    # O termo de busca vira frase. Termos diferentes que viram a mesma frase são a mesma ideia.
+    raw = subject
+    subject = natural_subject(raw, channel["language"], channel.get("niche"))
+    options = title_options(channel, raw, video_format)
     thumbnail = text["thumb"].format(s=subject)
     if channel["tone"]:
         thumbnail += f" {text['tone']}: {channel['tone']}."
     return _insert(
         conn, channel, subject=subject, justification=" ".join(reasons), sources=sources,
-        titles=[pattern.format(s=subject) for pattern in text["titles"]],
+        titles=[item["title"] for item in options], options=options,
         thumbnail_idea=thumbnail, hook=text["hook"].format(s=subject),
         video_format=video_format, duration_seconds=_duration(channel, video_format),
         target_audience=channel["audience"] or "Público ainda não definido no perfil do canal.",
@@ -254,13 +261,12 @@ def _open_recommendation(conn: sqlite3.Connection, channel_id: str, recommendati
 
 
 def generate_titles(conn: sqlite3.Connection, channel_id: str, recommendation_id: str) -> dict:
-    """Três títulos por regras, no idioma do canal. Pode ser refeito até a produção começar."""
+    """Três títulos por regras, no idioma do canal, com a justificativa de cada um. Pode ser refeito até a produção começar."""
     channel = get_channel(conn, channel_id)
     row = _open_recommendation(conn, channel_id, recommendation_id)
-    subject = row["subject"][:1].upper() + row["subject"][1:]
-    titles = [pattern.format(s=subject) for pattern in _text(channel["language"])["titles"]]
-    conn.execute("UPDATE recommendations SET titles_json = ?, updated_at = ? WHERE id = ?",
-                 (json.dumps(titles, ensure_ascii=False), to_iso(utcnow()), recommendation_id))
+    options = title_options(channel, row["subject"], row["format"])
+    conn.execute("UPDATE recommendations SET titles_json = ?, title_options_json = ?, updated_at = ? WHERE id = ?",
+                 (json.dumps([item["title"] for item in options], ensure_ascii=False), json.dumps(options, ensure_ascii=False), to_iso(utcnow()), recommendation_id))
     conn.commit()
     return recommendation_view(conn.execute("SELECT * FROM recommendations WHERE id = ?", (recommendation_id,)).fetchone())
 

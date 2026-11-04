@@ -17,7 +17,7 @@ from ..metrics.text import normalize, tokens
 from ..policy import policy_state
 from ..studio import recommend, store
 from ..studio.store import StudioError
-from . import competitors, keywords
+from . import competitors, keywords, titles
 from .common import compatible
 
 MAX_NEW = 6
@@ -75,7 +75,7 @@ def _candidates(conn: sqlite3.Connection, studio: sqlite3.Connection, settings: 
     if policy_state(settings).derived_allowed:
         wanted = {token for keyword in channel["keywords"] for token in tokens(keyword)}
         for trend in services.trends(conn, settings)["items"]:
-            if wanted & set(tokens(trend["term"])) and trend["accelerating_share"] >= 0.3:
+            if wanted & set(tokens(trend["term"])) and trend["accelerating_share"] >= 0.3 and titles.is_real_subject(trend["term"], channel["language"]):
                 output.append((trend["term"], f"{trend['accelerating']} de {trend['videos']} vídeos monitorados ganham velocidade, em {trend['channels']} canais. Calculado por este aplicativo.",
                                {"kind": "tendencia", "label": f"Tendência: {trend['term']}", "url": f"/palavras?termo={quote(trend['term'])}&canal={channel['id']}&aba=ascensao", "fictional": fictional}, "media"))
         covered = {token for video in store.list_history(studio, channel["id"]) for token in tokens(video["title"])}
@@ -84,7 +84,7 @@ def _candidates(conn: sqlite3.Connection, studio: sqlite3.Connection, settings: 
             if not research_id:
                 continue
             for subject in competitors._recurring_subjects(competitors._videos(conn, research_id))[:4]:
-                if " " in subject["term"] and not set(tokens(subject["term"])) & covered:
+                if " " in subject["term"] and titles.is_real_subject(subject["term"], channel["language"]) and not set(tokens(subject["term"])) & covered:
                     output.append((subject["term"], f"Assunto recorrente em {subject['videos']} vídeos de uma referência e ausente do seu histórico. Use um ângulo próprio.",
                                    {"kind": "concorrentes", "label": f"Referência: {competitor['name']}", "url": f"/canais/{channel['id']}/concorrentes/{competitor['id']}", "fictional": fictional}, "baixa"))
     return output
@@ -103,9 +103,7 @@ def generate(conn: sqlite3.Connection, studio: sqlite3.Connection, settings: Set
             break
         if recommend._is_avoided(subject, channel["avoid"]):
             continue
-        text = recommend._text(channel["language"])
-        pretty = subject[:1].upper() + subject[1:]
-        if _copies_a_video(conn, [pattern.format(s=pretty) for pattern in text["titles"]]):
+        if _copies_a_video(conn, [item["title"] for item in recommend.title_options(channel, subject, formats[index % len(formats)])]):
             skipped_copies += 1
             continue
         kind_basis = "demo_metrics" if source["kind"] == "tendencia" and channel["is_demo"] else "approved_metrics" if source["kind"] in {"tendencia", "concorrentes"} else basis

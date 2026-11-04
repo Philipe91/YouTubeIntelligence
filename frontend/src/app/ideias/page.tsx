@@ -46,7 +46,11 @@ function IdeaCard({ idea, today }: { idea: Idea; today: string }) {
             ))}
           </ul>
         </Field>
-        <Field label="Títulos">{idea.titles.length ? <ol className="list-decimal space-y-0.5 pl-4">{idea.titles.map((title) => <li key={title}>{title}</li>)}</ol> : "Gere os títulos na página do canal."}</Field>
+        <Field label="Títulos">
+          {idea.title_options.length ? (
+            <ol className="list-decimal space-y-1 pl-4">{idea.title_options.map((option) => <li key={option.title}>{option.title}<span className="block text-[0.8125rem] text-ink-3">{option.angle_label}. {option.why}</span></li>)}</ol>
+          ) : idea.titles.length ? <ol className="list-decimal space-y-0.5 pl-4">{idea.titles.map((title) => <li key={title}>{title}</li>)}</ol> : "Gere os títulos na página do canal."}
+        </Field>
         <Field label="Conceito de thumbnail">{idea.thumbnail_idea}</Field>
         <Field label="Hook inicial">{idea.hook}</Field>
         <Field label="Público">{idea.target_audience}</Field>

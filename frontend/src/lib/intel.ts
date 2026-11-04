@@ -101,8 +101,9 @@ export interface CompetitorDetail {
 export interface EditorialOpportunity { id: string; title: string; note: string; video_id: string | null; video_title: string | null; channel_ref: string | null; channel_title: string | null; item_type: string; niche: string | null; subniche: string | null; removed: boolean; source_url: string | null; status: string; recommendation_id: string | null; created_at: string }
 
 export interface IdeaSource { kind: string; label: string; url: string | null; fictional: boolean; verified?: boolean }
+export interface TitleOption { title: string; angle: string; angle_label: string; why: string; origin: string }
 export interface Idea {
-  id: string; channel_id: string; subject: string; justification: string; sources: IdeaSource[]; titles: string[]; thumbnail_idea: string; hook: string; format: string;
+  id: string; channel_id: string; subject: string; justification: string; sources: IdeaSource[]; titles: string[]; title_options: TitleOption[]; thumbnail_idea: string; hook: string; format: string;
   duration_seconds: number; target_audience: string; editorial_priority: string; difficulty: string | null; confidence: string | null; favorite: boolean; recommended_on: string;
   data_basis: string; origin: string; status: string; scheduled_on: string | null; facts_to_verify: string[];
 }
@@ -127,7 +128,7 @@ export interface LabCriterion { key: string; label: string; score: number; expla
 export interface TitleEval { title: string; characters: number; words: number; criteria: LabCriterion[]; warnings: string[]; review_score: number; note: string }
 export interface ImageEval { width: number; height: number; format: string; bytes: number; criteria: LabCriterion[]; warnings: string[]; review_score: number; limits: string[]; note: string }
 export interface LabVariation { id: string; project_id: string; title: string; title_eval: TitleEval; image_file: string | null; image_eval: ImageEval | null; note: string; favorite: boolean; created_at: string }
-export interface LabProject { project: { id: string; channel_id: string; subject: string; recommendation_id: string | null; created_at: string }; channel_name: string; variations: LabVariation[]; suggestions: TitleEval[]; note: string }
+export interface LabProject { project: { id: string; channel_id: string; subject: string; recommendation_id: string | null; created_at: string }; channel_name: string; variations: LabVariation[]; suggestions: (TitleEval & TitleOption)[]; titles_note: string; note: string }
 export interface LabProjects { total: number; limit: number; offset: number; items: { id: string; subject: string; updated_at: string; variations: number }[] }
 
 export async function intelGet<T>(path: string, params?: Record<string, string | undefined>): Promise<T> {

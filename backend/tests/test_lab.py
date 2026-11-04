@@ -106,11 +106,13 @@ def test_empty_title_is_refused(title):
 
 def test_suggestions_follow_language_and_skip_copies():
     pt = lab.suggest_titles("queda de Roma", "pt")
-    assert len(pt) == 8 and len({s["title"] for s in pt}) == 8 and "história pouco contada" in pt[0]["title"]
-    assert "untold" in lab.suggest_titles("fall of Rome", "en")[0]["title"]
-    assert "poco contada" in lab.suggest_titles("caída de Roma", "es")[0]["title"]
-    forbidden = {"queda de roma: a historia pouco contada"}
-    assert all("pouco contada" not in s["title"] for s in lab.suggest_titles("queda de Roma", "pt", forbidden))
+    assert len(pt) == 3 and len({s["title"] for s in pt}) == 3 and pt[0]["title"] == "Queda de Roma: do começo ao fim"
+    assert all(s["why"] and s["review_score"] is not None for s in pt)
+    assert "start to finish" in lab.suggest_titles("fall of Rome", "en")[0]["title"]
+    assert "de principio a fin" in lab.suggest_titles("caída de Roma", "es")[0]["title"]
+    forbidden = {"queda de roma: do comeco ao fim"}
+    other = lab.suggest_titles("queda de Roma", "pt", forbidden)
+    assert len(other) == 3 and all("do começo ao fim" not in s["title"] for s in other)
     with pytest.raises(store.StudioError):
         lab.suggest_titles("x")
 
@@ -313,11 +315,11 @@ def test_lab_suggestions_drop_collected_titles(api):
 
     settings = main.app.dependency_overrides[main.settings_dep]()
     conn = connect(settings.db_path)
-    conn.execute("UPDATE videos SET title = 'Roma antiga: a história pouco contada' WHERE id = (SELECT id FROM videos LIMIT 1)")
+    conn.execute("UPDATE videos SET title = 'Roma antiga: do começo ao fim' WHERE id = (SELECT id FROM videos LIMIT 1)")
     conn.commit()
     conn.close()
     titles = [s["title"] for s in api.get(f"{base}/projects/{project['id']}").json()["suggestions"]]
-    assert "Roma antiga: a história pouco contada" not in titles and titles
+    assert "Roma antiga: do começo ao fim" not in titles and titles
 
 
 def test_deleting_channel_removes_lab_images(api, cfg):

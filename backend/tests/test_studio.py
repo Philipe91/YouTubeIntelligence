@@ -614,7 +614,7 @@ def test_recommendations_are_specific_to_each_channel(db, research, settings):
     items_b = store.list_recommendations(db, b["id"])
     assert "Tema exclusivo de B" not in subjects_a
     assert {r["target_audience"] for r in items_b} == {"Público de B"}
-    assert any("la historia" in r["titles"][0] for r in items_b), "respeita o idioma do canal"
+    assert any("de principio a fin" in r["titles"][0] for r in items_b), "respeita o idioma do canal"
 
 
 @pytest.mark.parametrize("change", [
@@ -764,7 +764,7 @@ def test_demo_activity_is_seeded_once_labelled_and_only_on_fictional_channels(ap
 def test_titles_read_naturally_with_any_subject(db, research, settings):
     channel = make_channel(db, keywords=["vikings"], topic_backlog=["O último dia de Cartago"], tone="Direto")
     created = {r["subject"]: r for r in recommend.generate(db, research, settings, channel["id"])["created"]}
-    assert created["O último dia de Cartago"]["titles"][0] == "O último dia de Cartago: a história pouco contada"
+    assert created["O último dia de Cartago"]["titles"][0] == "O último dia de Cartago: do começo ao fim"
     assert "Vikings" in created, "assunto começa com maiúscula"
     assert created["Vikings"]["thumbnail_idea"].endswith("Tom: Direto.")
     assert " de O " not in " ".join(created["O último dia de Cartago"]["titles"])

@@ -483,6 +483,15 @@ def lab_project(channel_id: str, project_id: str, conn=Depends(research_db), stu
     return lab.get_project(studio, channel_id, project_id, forbidden)
 
 
+@router.post("/channels/{channel_id}/lab/projects/{project_id}/ai-titles", status_code=201)
+def lab_ai_titles(channel_id: str, project_id: str, conn=Depends(research_db), studio=Depends(studio_conn), settings=Depends(settings_dep), provider=Depends(coach_provider)):
+    active = provider or coach.get_provider(settings)
+    if not active.is_ai:
+        raise StudioError("ai_not_configured", "Nenhum provedor de IA configurado. Os títulos por regras continuam disponíveis.", 409)
+    forbidden = {normalize(row["title"]) for row in conn.execute("SELECT title FROM videos")}
+    return lab.ai_variations(studio, active, channel_id, project_id, forbidden, utcnow())
+
+
 @router.post("/channels/{channel_id}/lab/projects/{project_id}/delete")
 def lab_delete_project(channel_id: str, project_id: str, studio=Depends(studio_conn), settings=Depends(settings_dep)):
     lab.delete_project(studio, settings, channel_id, project_id)

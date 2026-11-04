@@ -17,8 +17,9 @@ from PIL import Image, ImageFilter, ImageStat, UnidentifiedImageError
 
 from ..config import Settings
 from ..db import to_iso
-from ..metrics.text import normalize, tokens
+from ..metrics.text import tokens
 from ..studio.store import StudioError, get_channel, new_id
+from . import titles
 
 NOTE = "Nota de revisão por regras. Não foi calibrada com resultados reais e não prevê CTR, views ou viralização."
 TITLE_LIMIT = 100
@@ -34,11 +35,6 @@ FILE_NAME = re.compile(r"^var_[0-9a-f]{16}\.jpg$")
 CURIOSITY = re.compile(r"\?|por que|por quê|porque|como |segredo|ninguém|quase ninguém|verdade|mito|estranh|inesperad|why|how |secret|nobody|truth|myth|strange|qué|cómo|nadie|secreto|verdad", re.I)
 PROMISE_WORDS = re.compile(r"\d|explicad|entenda|aprenda|guia|história de|o dia em que|como |explained|guide|how |the day|the story|cómo|guía|historia de", re.I)
 CLICKBAIT = re.compile(r"você não vai acreditar|chocante|inacreditável|urgente|bizarro demais|you won.t believe|shocking|no vas a creer|impactante", re.I)
-TEMPLATES = {
-    "pt": ["{s}: a história pouco contada", "{s}: o que quase ninguém explica", "Por que {s} ainda importa?", "O dia em que tudo mudou: {s}", "{s}, do começo ao fim", "A parte de {s} que ficou de fora", "Como {s} realmente aconteceu", "{s} em poucas palavras"],
-    "es": ["{s}: la historia poco contada", "{s}: lo que casi nadie explica", "¿Por qué {s} sigue importando?", "El día en que todo cambió: {s}", "{s}, de principio a fin", "La parte de {s} que quedó fuera", "Cómo ocurrió realmente {s}", "{s} en pocas palabras"],
-    "en": ["{s}: the untold story", "{s}: what almost nobody explains", "Why {s} still matters", "The day everything changed: {s}", "{s}, start to finish", "The part of {s} that got left out", "How {s} really happened", "{s} in a few words"],
-}
 
 
 def _clamp(value: float) -> int:
@@ -95,19 +91,24 @@ def evaluate_title(title: str, subject: str = "") -> dict:
             "review_score": _clamp(sum(c["score"] for c in criteria) / len(criteria)), "note": NOTE}
 
 
-def suggest_titles(subject: str, language: str = "pt", forbidden: set[str] | None = None) -> list[dict]:
-    """Alternativas por modelo de texto. Título igual ao de um vídeo coletado fica de fora."""
+def suggest_titles(subject: str, language: str = "pt", forbidden: set[str] | None = None, niche: str | None = None, avoid: list[str] | None = None, video_format: str = "long") -> list[dict]:
+    """Três alternativas de ângulos diferentes, revisadas. Título igual ao de um vídeo coletado é trocado."""
     text = " ".join((subject or "").split())
     if not 3 <= len(text) <= 200:
         raise StudioError("invalid_field", "Informe o assunto em 3 a 200 caracteres.")
-    patterns = TEMPLATES.get(language.split("-")[0], TEMPLATES["en"])
-    output = []
-    for pattern in patterns:
-        built = pattern.format(s=text)
-        built = built[:1].upper() + built[1:]
-        if normalize(built) not in (forbidden or set()):
-            output.append(evaluate_title(built, text))
-    return output
+    return [{**item, **evaluate_title(item["title"], text)} for item in titles.build_titles(text, language, video_format, niche, forbidden, avoid)]
+
+
+def ai_variations(studio: sqlite3.Connection, provider, channel_id: str, project_id: str, forbidden: set[str] | None, now: datetime) -> dict:
+    """Só por pedido explícito, porque tem custo. Cada alternativa vira uma variação, com o motivo na nota."""
+    project = _project(studio, channel_id, project_id)
+    channel = get_channel(studio, channel_id)
+    options, usage = titles.ai_titles(provider, project["subject"], channel["language"], channel, forbidden)
+    created = []
+    for item in options:
+        origin = "Sugestão por regras" if item["origin"] == "regras" else "Sugestão do Claude"
+        created.append(add_variation(studio, channel_id, project_id, item["title"], f"{origin}: {item['why']}", now))
+    return {"created": len(created), "usage": usage, "note": titles.NO_EVIDENCE}
 
 
 # --- Imagem ---------------------------------------------------------------------------------------
@@ -264,7 +265,7 @@ def get_project(studio: sqlite3.Connection, channel_id: str, project_id: str, fo
     channel = get_channel(studio, channel_id)
     rows = studio.execute("SELECT * FROM lab_variations WHERE project_id = ? ORDER BY favorite DESC, created_at, id", (project_id,)).fetchall()
     return {"project": project, "channel_name": channel["name"], "variations": [_variation_view(r) for r in rows],
-            "suggestions": suggest_titles(project["subject"], channel["language"], forbidden), "note": NOTE}
+            "suggestions": suggest_titles(project["subject"], channel["language"], forbidden, channel.get("niche"), channel.get("avoid")), "titles_note": titles.NO_EVIDENCE, "note": NOTE}
 
 
 def _touch(studio: sqlite3.Connection, project_id: str, now: datetime) -> None:

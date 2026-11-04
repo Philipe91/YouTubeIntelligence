@@ -275,6 +275,7 @@ def recommendation_view(row: sqlite3.Row) -> dict:
     data = dict(row)
     data["sources"] = json.loads(data.pop("sources_json"))
     data["titles"] = json.loads(data.pop("titles_json"))
+    data["title_options"] = json.loads(data.pop("title_options_json", None) or "[]")
     data["facts_to_verify"] = json.loads(data.pop("facts_to_verify_json"))
     data.pop("dedupe_key", None)
     return data
