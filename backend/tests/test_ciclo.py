@@ -410,7 +410,7 @@ def test_studio_migration_preserves_recommendations_and_jobs(tmp_path):
                     VALUES ('j', 'c', 'r', 't', 'long', 1, 'running', 'a', ?, ?)""", (stamp, stamp))
     conn.execute("INSERT INTO job_events (job_id, at, level, kind, message) VALUES ('j', ?, 'info', 'state', 'm')", (stamp,))
     conn.commit()
-    assert migrate(conn, store.MIGRATIONS) == ["002_briefing_execucoes.sql", "003_producao_real.sql"]
+    assert migrate(conn, store.MIGRATIONS) == ["002_briefing_execucoes.sql", "003_producao_real.sql", "004_inteligencia.sql"]
     assert conn.execute("SELECT recommendation_id FROM production_jobs").fetchone()[0] == "r", "recriar a tabela não pode soltar a tarefa"
     assert conn.execute("SELECT COUNT(*) FROM job_events").fetchone()[0] == 1
     assert conn.execute("SELECT pipeline_profile FROM managed_channels").fetchone()[0] == "simulado"

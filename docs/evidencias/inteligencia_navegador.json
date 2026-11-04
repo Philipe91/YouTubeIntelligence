@@ -1,0 +1,59 @@
+{
+ "passos": [
+  {
+   "passo": "pesquisa por tema, com filtro de formato real"
+  },
+  {
+   "passo": "salvar e recuperar pesquisa"
+  },
+  {
+   "passo": "exportar CSV só com dados crus",
+   "linhas": 8
+  },
+  {
+   "passo": "comparar duas pesquisas"
+  },
+  {
+   "passo": "busca de canais por nicho"
+  },
+  {
+   "passo": "canais pequenos em atividade"
+  },
+  {
+   "passo": "resultado vazio com orientação"
+  },
+  {
+   "passo": "erro de validação na tela"
+  },
+  {
+   "passo": "histórico isolado por canal"
+  },
+  {
+   "passo": "volume indisponível separado do índice experimental"
+  },
+  {
+   "passo": "abas do termo"
+  },
+  {
+   "passo": "favorita isolada por canal"
+  },
+  {
+   "passo": "listas do canal: sugestões, descoberta e histórico"
+  },
+  {
+   "passo": "celular sem estouro horizontal",
+   "rotas": 7
+  },
+  {
+   "passo": "restrito: sem chave, erro explicado na tela"
+  },
+  {
+   "passo": "restrito: resultado cru, com link e sem score"
+  },
+  {
+   "passo": "restrito: índice, relacionados e ascensão bloqueados; variações seguem úteis"
+  }
+ ],
+ "cenarios": {},
+ "erros_de_pagina": []
+}

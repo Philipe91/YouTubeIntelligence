@@ -370,8 +370,9 @@ def test_sync_analytics_stores_measured_rows_by_content_type(conn, live_settings
         if "oauth2" in request.url.host:
             return httpx.Response(200, json={"access_token": "at-1"})
         seen["auth"] = request.headers["authorization"]
-        seen["dimensions"] = request.url.params["dimensions"]
-        seen["metrics"] = request.url.params["metrics"]
+        # A primeira chamada é o relatório diário; a segunda, o de termos de busca.
+        seen.setdefault("dimensions", request.url.params["dimensions"])
+        seen.setdefault("metrics", request.url.params["metrics"])
         return httpx.Response(200, json={
             "columnHeaders": [{"name": n} for n in ["day", "creatorContentType", "views", "estimatedMinutesWatched", "averageViewDuration", "averageViewPercentage", "subscribersGained", "subscribersLost"]],
             "rows": [["2026-09-30", "SHORTS", 100, 50, 30.0, 70.0, 3, 1], ["2026-09-30", "VIDEO_ON_DEMAND", 40, 200, 300.0, 40.0, 1, 0]],
@@ -776,6 +777,6 @@ def test_system_endpoint_exposes_no_secret(tmp_path):
 
 def test_migrations_are_idempotent(tmp_path):
     conn = connect(tmp_path / "x.sqlite")
-    assert migrate(conn) == ["001_init.sql", "002_video_format.sql"]
+    assert migrate(conn) == ["001_init.sql", "002_video_format.sql", "003_intelligence.sql"]
     assert migrate(conn) == []
     conn.close()

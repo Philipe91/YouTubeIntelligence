@@ -183,7 +183,7 @@ def videos_due_for_snapshot(conn: sqlite3.Connection, settings: Settings, now: d
         """SELECT v.id, v.published_at, MAX(s.captured_at) AS last_capture FROM videos v
            JOIN channels c ON c.id = v.channel_id
            LEFT JOIN snapshots s ON s.video_id = v.id
-           WHERE c.monitored = 1 OR c.is_own = 1 OR v.id IN (SELECT video_id FROM search_results)
+           WHERE c.monitored = 1 OR c.is_own = 1 OR v.id IN (SELECT video_id FROM search_results) OR v.id IN (SELECT video_id FROM study_videos)
            GROUP BY v.id ORDER BY v.published_at DESC"""
     ).fetchall()
     due: list[str] = []
@@ -278,7 +278,31 @@ def sync_own_analytics(conn: sqlite3.Connection, settings: Settings, store: oaut
         conn.execute("UPDATE oauth_channels SET last_authorization_check_at = ? WHERE channel_id = ?", (to_iso(now), channel_id))
         conn.commit()
         synced[channel_id] = len(rows_out)
+        _sync_search_terms(conn, ledger, access, channel_id, now, transport)
     return synced
+
+
+def _sync_search_terms(conn: sqlite3.Connection, ledger: QuotaLedger, access: str, channel_id: str, now: datetime, transport=None, days: int = 28) -> int:
+    """Relatório nunca testado com conta real: se o Google recusar, os dados diários já estão salvos."""
+    ledger.check("reports.query", now)
+    bucket, units = ledger.cost("reports.query")
+    start, end = (now - timedelta(days=days)).date().isoformat(), now.date().isoformat()
+    try:
+        rows = youtube_analytics.fetch_top_search_terms(access, start, end, transport)
+    except youtube_analytics.AnalyticsError as error:
+        ledger.record("analytics", "reports.query", bucket, units, None, type(error).__name__, now)
+        return 0
+    ledger.record("analytics", "reports.query", bucket, units, 200, None, now)
+    conn.execute("DELETE FROM own_search_terms WHERE channel_id = ?", (channel_id,))
+    for item in rows:
+        if not item.get("insightTrafficSourceDetail"):
+            continue
+        conn.execute(
+            "INSERT OR REPLACE INTO own_search_terms (channel_id, term, views, minutes_watched, period_start, period_end, fetched_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (channel_id, item["insightTrafficSourceDetail"], item.get("views"), item.get("estimatedMinutesWatched"), start, end, to_iso(now)),
+        )
+    conn.commit()
+    return len(rows)
 
 
 def register_own_channel(client: YouTubeDataClient, conn: sqlite3.Connection, settings: Settings, store: oauth.TokenStore,

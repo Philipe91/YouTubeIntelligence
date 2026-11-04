@@ -169,7 +169,8 @@ def is_seeded(conn: sqlite3.Connection) -> bool:
 
 
 def reset_demo(conn: sqlite3.Connection, now: datetime) -> None:
-    for table in ("ai_generations", "search_results", "searches", "analytics_daily", "snapshots", "videos",
+    for table in ("coach_conversations", "research_runs", "keyword_lookups", "editorial_opportunities", "study_videos", "own_search_terms",
+                  "intel_meta", "ai_generations", "search_results", "searches", "analytics_daily", "snapshots", "videos",
                   "channel_snapshots", "channels", "niches"):
         conn.execute(f"DELETE FROM {table}")
     conn.commit()

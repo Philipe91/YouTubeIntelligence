@@ -19,6 +19,25 @@ class AnalyticsError(RuntimeError):
     pass
 
 
+def fetch_top_search_terms(access_token: str, start_date: str, end_date: str,
+                           transport: httpx.BaseTransport | None = None) -> list[dict]:
+    """Termos de busca que trouxeram views ao próprio canal. O relatório aceita no máximo 25 linhas."""
+    with httpx.Client(timeout=60.0, transport=transport) as client:
+        response = client.get(
+            REPORTS_URL,
+            headers={"Authorization": f"Bearer {access_token}"},
+            params={
+                "ids": "channel==MINE", "startDate": start_date, "endDate": end_date, "metrics": "views,estimatedMinutesWatched",
+                "dimensions": "insightTrafficSourceDetail", "filters": "insightTrafficSourceType==YT_SEARCH", "sort": "-views", "maxResults": 25,
+            },
+        )
+    if response.status_code != 200:
+        raise AnalyticsError(redact(f"Analytics retornou HTTP {response.status_code}."))
+    body = response.json()
+    columns = [header["name"] for header in body.get("columnHeaders", [])]
+    return [dict(zip(columns, row)) for row in body.get("rows", [])]
+
+
 def fetch_daily_by_content_type(access_token: str, start_date: str, end_date: str,
                                 transport: httpx.BaseTransport | None = None) -> list[dict]:
     with httpx.Client(timeout=60.0, transport=transport) as client:

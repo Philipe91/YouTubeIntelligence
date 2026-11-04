@@ -1,6 +1,7 @@
 """API do estúdio usada pelo dashboard. Escuta só em 127.0.0.1, como o restante do aplicativo."""
 from __future__ import annotations
 
+import shutil
 import sqlite3
 import uuid
 from collections.abc import Iterator
@@ -120,6 +121,21 @@ def overview(conn=Depends(studio_conn), settings=Depends(_settings)):
     }
 
 
+def _purge_intelligence(settings: Settings, channel_id: str) -> None:
+    """A pesquisa fica em outro banco: remover o canal apaga também o que estava associado a ele."""
+    from ..intel.common import purge_channel  # Evita ciclo: intel usa este módulo.
+
+    for path in (settings.data_dir / "demo.sqlite", settings.live_db_path):
+        if path.exists():
+            research = connect(path)
+            try:
+                migrate(research)
+                purge_channel(research, channel_id)
+            finally:
+                research.close()
+    shutil.rmtree(settings.data_dir / "lab" / channel_id, ignore_errors=True)
+
+
 class ChannelBody(BaseModel):
     fields: dict[str, Any]
 
@@ -153,8 +169,9 @@ class DeleteBody(BaseModel):
 
 
 @router.post("/channels/{channel_id}/delete")
-def delete_channel(channel_id: str, body: DeleteBody, conn=Depends(studio_conn)):
+def delete_channel(channel_id: str, body: DeleteBody, conn=Depends(studio_conn), settings=Depends(_settings)):
     store.delete_channel(conn, channel_id, body.confirm_name)
+    _purge_intelligence(settings, channel_id)
     return {"deleted": channel_id}
 
 

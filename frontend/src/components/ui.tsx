@@ -21,7 +21,8 @@ export function SectionTitle({ children }: { children: ReactNode }) {
 }
 
 export function Panel({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <section className={`rounded-lg border border-line bg-surface ${className}`}>{children}</section>;
+  // min-w-0: dentro de uma grade, a tabela rola no próprio painel em vez de alargar a página.
+  return <section className={`min-w-0 rounded-lg border border-line bg-surface ${className}`}>{children}</section>;
 }
 
 /** Abas de formato. Shorts e longos nunca aparecem na mesma lista. */

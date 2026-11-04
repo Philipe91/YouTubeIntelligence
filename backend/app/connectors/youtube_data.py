@@ -156,6 +156,11 @@ class YouTubeDataClient:
             "maxResults": max_results, "pageToken": page_token,
         })
 
+    def search_channels(self, query: str, language: str | None = None, country: str | None = None, max_results: int = 25) -> dict:
+        return self.request("search.list", "/search", {
+            "part": "snippet", "type": "channel", "q": query, "relevanceLanguage": language, "regionCode": country, "maxResults": max_results,
+        })
+
     def videos(self, ids: list[str], use_cache: bool = True) -> dict:
         if len(ids) > 50:
             raise ValueError("videos.list aceita até 50 IDs por chamada")

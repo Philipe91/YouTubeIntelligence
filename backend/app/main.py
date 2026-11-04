@@ -16,6 +16,7 @@ from .ai.generation import GenerationError, generate_for_topic
 from .config import Settings
 from .db import connect, migrate, utcnow
 from .deps import settings_dep
+from .intel import router as intel_router
 from .logging_safe import install_redaction, redact
 from .policy import PolicyBlocked
 from .scheduler import ensure_jobs
@@ -47,6 +48,7 @@ def conn_dep(settings: Settings = Depends(settings_dep)) -> Iterator[sqlite3.Con
 
 
 app.include_router(studio_router.router)
+app.include_router(intel_router.router)
 
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 ALLOWED_HOSTS = {"127.0.0.1", "localhost"}

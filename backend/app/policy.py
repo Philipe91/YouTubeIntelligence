@@ -148,6 +148,10 @@ def apply_retention(conn: sqlite3.Connection, settings: Settings, now: datetime)
     removed["channels"] = conn.execute(
         "DELETE FROM channels WHERE text_refreshed_at < ?", (text_cutoff,)
     ).rowcount
+    # Respostas do Coach podem citar títulos e nomes: seguem o mesmo prazo do texto.
+    removed["coach_conversations"] = conn.execute(
+        "DELETE FROM coach_conversations WHERE updated_at < ?", (text_cutoff,)
+    ).rowcount
     conn.commit()
     return removed
 
