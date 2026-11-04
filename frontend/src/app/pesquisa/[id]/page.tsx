@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { ActionForm } from "@/components/ActionForm";
 import { Value } from "@/components/Mark";
 import { Empty, PageHeader, Panel, Pill, SourceLink, str } from "@/components/ui";
-import { Notice, OriginPill, Pagination, VideoResults } from "@/components/intel";
+import { Notice, OriginPill, Pagination, ProvenanceNote, VideoResults } from "@/components/intel";
 import { compact, dateTime, FORMAT_LABEL, shortDate } from "@/lib/format";
 import { intelGet, intelGetOrNull, type ChannelResult, type IntelContext, type Page, type Run, type RunView } from "@/lib/intel";
 
@@ -49,7 +49,7 @@ export default async function RunPage({ params, searchParams }: { params: Promis
     <>
       <p className="mb-2 text-sm"><Link className="text-cobalt underline underline-offset-2" href="/pesquisa?aba=historico">Voltar ao histórico</Link></p>
       <PageHeader title={run.query} intro={`${run.kind_label}, em ${dateTime(run.executed_at)}. ${channelName ? `Associada a ${channelName}.` : "Sem canal associado."}`}>
-        <div className="flex flex-wrap gap-1.5"><OriginPill fictional={run.fictional} />{run.saved_name && <Pill tone="info">Salva: {run.saved_name}</Pill>}</div>
+        <div className="flex flex-wrap gap-1.5"><OriginPill fictional={run.fictional} simulated={run.simulated} />{run.saved_name && <Pill tone="info">Salva: {run.saved_name}</Pill>}</div>
       </PageHeader>
 
       <div className="mb-4 flex flex-wrap items-end gap-3">
@@ -71,6 +71,7 @@ export default async function RunPage({ params, searchParams }: { params: Promis
       </div>
 
       <div className="mb-4 space-y-2">
+        <ProvenanceNote run={run} />
         <p className="text-sm text-ink-2">Filtros: {filters.length ? filters.join(", ") : "nenhum"}. Volume de busca: <Value metric={data.search_volume} format={compact} muted="Indisponível" />.{run.total_results_approx !== null && ` A API informa cerca de ${compact(run.total_results_approx)} resultados, número aproximado.`}</p>
         {data.filter_notes.map((note) => <Notice key={note}>{note}</Notice>)}
         {!data.derived_allowed && <Notice tone="warn" title="Só dados crus">Scores e VPH estão bloqueados pela política da API até a aprovação do Google. <Link className="underline" href="/sistema">Ver o que falta</Link></Notice>}
@@ -81,7 +82,7 @@ export default async function RunPage({ params, searchParams }: { params: Promis
         {run.kind === "channels" || run.kind === "emerging" ? <ChannelTable channels={data.channels} /> : <VideoResults videos={data.videos} />}
         <Pagination total={data.total} limit={data.limit} offset={data.offset} href={(next) => `/pesquisa/${run.id}?inicio=${next}`} />
       </Panel>
-      {run.kind === "emerging" && <p className="mt-2 text-[0.8125rem] text-ink-3">Canais que publicaram sobre o tema no período, do menor para o maior em inscritos. É um filtro sobre o número público, não uma nota de potencial.</p>}
+      {run.kind === "emerging" && <p className="mt-2 text-[0.8125rem] text-ink-3">Canais que publicaram sobre o tema no período, até o limite de inscritos. {data.derived_allowed ? "Do menor para o maior em inscritos." : "Na ordem da busca do YouTube."} É um filtro sobre o número público, não uma nota de potencial. Canais que ocultam os inscritos ficam de fora.</p>}
     </>
   );
 }

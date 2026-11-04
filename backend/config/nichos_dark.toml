@@ -1,0 +1,132 @@
+# Nichos comuns em canais dark, com termos de busca por idioma.
+# É um atalho editorial, escrito à mão: não vem do YouTube e não mede demanda.
+# Ajuste à vontade. O termo de busca é o texto enviado à API, somado ao que você digitar.
+
+[historia]
+label = "História"
+[historia.subniches.antiga]
+label = "Mundo antigo"
+pt = "história antiga"
+en = "ancient history"
+es = "historia antigua"
+[historia.subniches.medieval]
+label = "Idade Média"
+pt = "idade média história"
+en = "medieval history"
+es = "edad media historia"
+[historia.subniches.guerras]
+label = "Guerras e batalhas"
+pt = "guerras história documentário"
+en = "war history documentary"
+es = "guerras historia documental"
+[historia.subniches.imperios]
+label = "Impérios e civilizações"
+pt = "impérios e civilizações"
+en = "empires and civilizations"
+es = "imperios y civilizaciones"
+
+[misterios]
+label = "Mistérios"
+[misterios.subniches.nao_resolvidos]
+label = "Casos sem solução"
+pt = "mistérios sem solução"
+en = "unsolved mysteries"
+es = "misterios sin resolver"
+[misterios.subniches.desaparecimentos]
+label = "Desaparecimentos"
+pt = "desaparecimentos misteriosos"
+en = "mysterious disappearances"
+es = "desapariciones misteriosas"
+[misterios.subniches.lugares]
+label = "Lugares estranhos"
+pt = "lugares misteriosos"
+en = "mysterious places"
+es = "lugares misteriosos"
+
+[crimes]
+label = "Crimes reais"
+[crimes.subniches.casos]
+label = "Casos famosos"
+pt = "crimes reais casos"
+en = "true crime cases"
+es = "crímenes reales casos"
+[crimes.subniches.golpes]
+label = "Golpes e fraudes"
+pt = "maiores golpes da história"
+en = "biggest scams in history"
+es = "mayores estafas de la historia"
+
+[ciencia]
+label = "Ciência e espaço"
+[ciencia.subniches.espaco]
+label = "Espaço"
+pt = "espaço universo documentário"
+en = "space universe documentary"
+es = "espacio universo documental"
+[ciencia.subniches.corpo]
+label = "Corpo humano"
+pt = "corpo humano curiosidades"
+en = "human body explained"
+es = "cuerpo humano curiosidades"
+[ciencia.subniches.natureza]
+label = "Natureza e animais"
+pt = "animais natureza curiosidades"
+en = "animals nature facts"
+es = "animales naturaleza curiosidades"
+
+[mitologia]
+label = "Mitologia e religião"
+[mitologia.subniches.grega]
+label = "Mitologia grega"
+pt = "mitologia grega"
+en = "greek mythology"
+es = "mitología griega"
+[mitologia.subniches.nordica]
+label = "Mitologia nórdica"
+pt = "mitologia nórdica"
+en = "norse mythology"
+es = "mitología nórdica"
+[mitologia.subniches.biblica]
+label = "Histórias bíblicas"
+pt = "histórias da bíblia"
+en = "bible stories"
+es = "historias de la biblia"
+
+[biografias]
+label = "Biografias"
+[biografias.subniches.lideres]
+label = "Líderes e governantes"
+pt = "biografia líderes da história"
+en = "history leaders biography"
+es = "biografía líderes de la historia"
+[biografias.subniches.empresarios]
+label = "Empresários e marcas"
+pt = "história de empresas e marcas"
+en = "company history documentary"
+es = "historia de empresas y marcas"
+
+[financas]
+label = "Dinheiro e economia"
+[financas.subniches.crises]
+label = "Crises econômicas"
+pt = "crises econômicas explicadas"
+en = "economic crises explained"
+es = "crisis económicas explicadas"
+[financas.subniches.riqueza]
+label = "Riqueza e negócios"
+pt = "como ficaram ricos negócios"
+en = "how they got rich business"
+es = "cómo se hicieron ricos negocios"
+
+[terror]
+label = "Terror e relatos"
+[terror.subniches.relatos]
+label = "Relatos de terror"
+pt = "relatos de terror"
+en = "scary stories"
+es = "relatos de terror"
+[terror.subniches.lendas]
+label = "Lendas urbanas"
+pt = "lendas urbanas"
+en = "urban legends"
+es = "leyendas urbanas"

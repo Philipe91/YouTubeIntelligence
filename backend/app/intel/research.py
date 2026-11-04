@@ -7,6 +7,7 @@ Modo real: usa a API oficial, com cota e cache. A pesquisa guarda IDs: o texto c
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 from datetime import datetime, timedelta
 
@@ -25,7 +26,9 @@ KINDS = {
     "emerging": "Canais pequenos em atividade",
 }
 ORDERS = {"relevance", "date", "viewCount"}
-FORMATS = {"short", "long"}
+FORMATS = {"short", "long", "indeterminate"}
+COUNTRY = re.compile(r"^[A-Z]{2}$")
+LANGUAGE = re.compile(r"^[a-z]{2,3}(-[a-z0-9]{2,8})?$")
 RECENT_DEFAULT_DAYS = 7
 EMERGING_WINDOW_DAYS = 30
 EMERGING_MAX_SUBSCRIBERS = 100_000
@@ -33,8 +36,9 @@ MAX_RESULTS = 50
 FILTER_NOTES = {
     "language": "No YouTube, o idioma só orienta a relevância: resultados em outro idioma podem aparecer.",
     "country": "No YouTube, o país orienta a região da busca. Não garante que o canal seja de lá.",
-    "format": "A API não tem filtro de Shorts. O formato é aplicado depois, sobre os vídeos devolvidos.",
+    "format": "A API não tem filtro de Shorts. O formato é aplicado depois, sobre os vídeos devolvidos: a lista pode vir menor.",
 }
+FORMAT_ONLY_INDETERMINATE = "Vídeos curtos sem proporção conhecida ficam fora dos filtros de Short e de longo. Escolha o formato Indeterminado para vê-los."
 
 
 def _clean_query(query: str) -> str:
@@ -60,13 +64,22 @@ def _filters(kind: str, language: str | None, country: str | None, days: int | N
         days = days or RECENT_DEFAULT_DAYS
     if kind == "emerging":
         days = days or EMERGING_WINDOW_DAYS
-    return {"language": (language or "").strip().lower() or None, "country": (country or "").strip().upper() or None, "days": days,
+    language = (language or "").strip().lower() or None
+    country = (country or "").strip().upper() or None
+    if language and not LANGUAGE.match(language):
+        raise StudioError("invalid_field", "Idioma inválido. Use um código como pt, en ou es.")
+    if country and not COUNTRY.match(country):
+        raise StudioError("invalid_field", "País inválido. Use a sigla de duas letras, como BR.")
+    if max_subscribers is not None and max_subscribers < 1:
+        raise StudioError("invalid_field", "O máximo de inscritos precisa ser positivo.")
+    return {"language": language, "country": country, "days": days,
             "format": video_format or None, "order": "date" if kind == "recent" else order,
             "max_subscribers": (max_subscribers or EMERGING_MAX_SUBSCRIBERS) if kind == "emerging" else None}
 
 
-def _matches(title: str, wanted: set[str]) -> bool:
-    return wanted <= set(tokens(title))
+def _matches(title: str, wanted: set[str], loose: bool = False) -> bool:
+    """A descoberta em modo demo é solta: os termos de nicho são longos, e os vídeos fictícios, poucos."""
+    return bool(wanted & set(tokens(title))) if loose else wanted <= set(tokens(title))
 
 
 def _latest_views(analysis, video_id: str) -> int:
@@ -90,7 +103,7 @@ def _local_videos(conn: sqlite3.Connection, settings: Settings, query: str, filt
         clauses.append("v.published_at >= ?")
         params.append(to_iso(now - timedelta(days=filters["days"])))
     where = (" WHERE " + " AND ".join(clauses)) if clauses else ""
-    rows = [r for r in conn.execute(services.VIDEO_SELECT + where, params) if _matches(r["title"], wanted)]
+    rows = [r for r in conn.execute(services.VIDEO_SELECT + where, params) if _matches(r["title"], wanted, bool(filters.get("discovery")))]
     if filters["order"] == "viewCount":
         analysis = services.analyze(conn, settings)
         rows.sort(key=lambda r: _latest_views(analysis, r["id"]), reverse=True)
@@ -103,8 +116,8 @@ def _subscribers(conn: sqlite3.Connection) -> dict[str, int | None]:
     return services._latest_subscribers(conn)
 
 
-def _emerging_from(conn: sqlite3.Connection, video_ids: list[str], limit: int) -> list[str]:
-    """Só filtra e ordena por inscritos, valor cru. Não cria nenhuma nota."""
+def _emerging_from(conn: sqlite3.Connection, video_ids: list[str], limit: int, sort_by_size: bool) -> list[str]:
+    """Filtra pelo número público de inscritos, sem criar nota. Sem aprovação, mantém a ordem da busca: ordenar seria um ranking."""
     subscribers = _subscribers(conn)
     channel_ids: list[str] = []
     for video_id in video_ids:
@@ -112,7 +125,8 @@ def _emerging_from(conn: sqlite3.Connection, video_ids: list[str], limit: int) -
         if row and row["channel_id"] not in channel_ids:
             channel_ids.append(row["channel_id"])
     known = [c for c in channel_ids if subscribers.get(c) is not None and subscribers[c] <= limit]
-    known.sort(key=lambda c: subscribers[c])
+    if sort_by_size:
+        known.sort(key=lambda c: subscribers[c])
     return known
 
 
@@ -129,23 +143,28 @@ def _local_channels(conn: sqlite3.Connection, query: str, filters: dict) -> list
             continue
         own_text = f"{row['title']} {row['description'] or ''} {row['niche'] or ''}"
         titles = conn.execute("SELECT title FROM videos WHERE channel_id = ?", (row["id"],)).fetchall()
-        if wanted <= set(tokens(own_text)) or any(_matches(t["title"], wanted) for t in titles):
+        loose = bool(filters.get("discovery"))
+        if _matches(own_text, wanted, loose) or any(_matches(t["title"], wanted, loose) for t in titles):
             found.append(row["id"])
     return found[:MAX_RESULTS]
 
 
 def _published_after(filters: dict, now: datetime) -> str | None:
-    return to_iso(now - timedelta(days=filters["days"])) if filters["days"] else None
+    """Arredondado para o dia. Com a hora exata, cada clique seria um pedido novo e o cache nunca valeria."""
+    if not filters["days"]:
+        return None
+    return to_iso((now - timedelta(days=filters["days"])).replace(hour=0, minute=0, second=0, microsecond=0))
 
 
-def _live_videos(conn, settings, factory: ClientFactory, query: str, filters: dict, now: datetime) -> tuple[list[str], int | None]:
-    client = factory(settings, conn)
-    try:
-        with youtube_errors():
-            result = collector.search_niche(client, conn, settings, query, now, language=filters["language"], country=filters["country"],
-                                            published_after=_published_after(filters, now), order=filters["order"])
-    finally:
-        client.close()
+def _search_language(language: str | None) -> str | None:
+    """`relevanceLanguage` espera o código de duas letras: pt-br vira pt."""
+    return language.split("-")[0] if language else None
+
+
+def _live_videos(conn, settings, client, query: str, filters: dict, now: datetime) -> tuple[list[str], int | None]:
+    with youtube_errors():
+        result = collector.search_niche(client, conn, settings, query, now, language=_search_language(filters["language"]), country=filters["country"],
+                                        published_after=_published_after(filters, now), order=filters["order"])
     rows = conn.execute(
         "SELECT v.id, v.format FROM search_results r JOIN videos v ON v.id = r.video_id WHERE r.search_id = ? ORDER BY r.rank",
         (result["search_id"],),
@@ -154,53 +173,67 @@ def _live_videos(conn, settings, factory: ClientFactory, query: str, filters: di
     return ids, result["total_results_approx"]
 
 
-def _live_channels(conn, settings, factory: ClientFactory, query: str, filters: dict, now: datetime) -> tuple[list[str], int | None]:
-    client = factory(settings, conn)
-    try:
-        with youtube_errors():
-            page = client.search_channels(query, filters["language"], filters["country"])
-            ids = [item["id"]["channelId"] for item in page.get("items", []) if item.get("id", {}).get("channelId")]
-            ids = list(dict.fromkeys(ids))
-            found: list[str] = []
-            if ids:
-                for item in client.channels(ids=ids[:50]).get("items", []):
-                    collector.upsert_channel(conn, item, now)
-                    found.append(item["id"])
-            conn.commit()
-    finally:
-        client.close()
+def _live_channels(conn, client, query: str, filters: dict, now: datetime) -> tuple[list[str], int | None]:
+    with youtube_errors():
+        page = client.search_channels(query, _search_language(filters["language"]), filters["country"])
+        ids = [item["id"]["channelId"] for item in page.get("items", []) if item.get("id", {}).get("channelId")]
+        ids = list(dict.fromkeys(ids))
+        found: list[str] = []
+        if ids:
+            for item in client.channels(ids=ids[:50]).get("items", []):
+                collector.upsert_channel(conn, item, client.last_fetched_at or now)
+                found.append(item["id"])
+        conn.commit()
     # A ordem da API é a da relevância: preserva e ignora IDs que não voltaram.
     return [i for i in ids if i in found], page.get("pageInfo", {}).get("totalResults")
+
+
+def _live_emerging(conn, settings, client, text: str, filters: dict, now: datetime) -> tuple[list[str], int | None]:
+    # O filtro de formato não se aplica ao canal: a busca traz vídeos de qualquer formato.
+    video_ids, total = _live_videos(conn, settings, client, text, {**filters, "format": None}, now)
+    channels = [row["channel_id"] for row in conn.execute(
+        f"SELECT DISTINCT channel_id FROM videos WHERE id IN ({', '.join('?' for _ in video_ids)})", video_ids)] if video_ids else []
+    with youtube_errors():
+        collector.refresh_channel_stats(client, conn, channels, now)
+    return _emerging_from(conn, video_ids, filters["max_subscribers"], policy_state(settings).derived_allowed), total
 
 
 def run_search(conn: sqlite3.Connection, studio: sqlite3.Connection, settings: Settings, *, kind: str, query: str,
                channel_id: str | None, now: datetime, language: str | None = None, country: str | None = None, days: int | None = None,
                video_format: str | None = None, order: str = "relevance", max_subscribers: int | None = None,
-               factory: ClientFactory = default_client) -> dict:
+               factory: ClientFactory = default_client, tags: dict | None = None, schedule_id: str | None = None) -> dict:
     require_channel(studio, settings, channel_id)
     text = _clean_query(query)
     filters = _filters(kind, language, country, days, video_format, order, max_subscribers)
+    if tags:
+        filters.update(tags)
     total: int | None = None
     if settings.mode == "demo":
+        provenance: dict = {"source": "dados_ficticios", "api_calls": 0, "cache_hits": 0, "methods": [], "oldest_data_at": None, "newest_data_at": None, "warnings": []}
         if kind in {"videos", "recent"}:
             ids, item_type = _local_videos(conn, settings, text, filters, now), "video"
         elif kind == "channels":
             ids, item_type = _local_channels(conn, text, filters), "channel"
         else:
-            ids, item_type = _emerging_from(conn, _local_videos(conn, settings, text, filters, now), filters["max_subscribers"]), "channel"
-    elif kind in {"videos", "recent"}:
-        (ids, total), item_type = _live_videos(conn, settings, factory, text, filters, now), "video"
-    elif kind == "channels":
-        (ids, total), item_type = _live_channels(conn, settings, factory, text, filters, now), "channel"
+            ids, item_type = _emerging_from(conn, _local_videos(conn, settings, text, filters, now), filters["max_subscribers"], True), "channel"
     else:
-        video_ids, total = _live_videos(conn, settings, factory, text, filters, now)
-        ids, item_type = _emerging_from(conn, video_ids, filters["max_subscribers"]), "channel"
+        client = factory(settings, conn)
+        try:
+            if kind in {"videos", "recent"}:
+                (ids, total), item_type = _live_videos(conn, settings, client, text, filters, now), "video"
+            elif kind == "channels":
+                (ids, total), item_type = _live_channels(conn, client, text, filters, now), "channel"
+            else:
+                (ids, total), item_type = _live_emerging(conn, settings, client, text, filters, now), "channel"
+            provenance = client.provenance()
+        finally:
+            client.close()
 
     run_id = new_id("run")
     conn.execute(
-        "INSERT INTO research_runs (id, managed_channel_id, kind, query, filters_json, data_origin, total_results_approx, result_count, executed_at) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        (run_id, channel_id, kind, text, json.dumps(filters, ensure_ascii=False), data_origin(settings), total, len(ids), to_iso(now)),
+        "INSERT INTO research_runs (id, managed_channel_id, kind, query, filters_json, data_origin, total_results_approx, result_count, executed_at, provenance_json, schedule_id) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (run_id, channel_id, kind, text, json.dumps(filters, ensure_ascii=False), data_origin(settings), total, len(ids), to_iso(now), json.dumps(provenance, ensure_ascii=False), schedule_id),
     )
     conn.executemany("INSERT INTO research_items (run_id, item_type, item_id, rank) VALUES (?, ?, ?, ?)",
                      [(run_id, item_type, item, rank + 1) for rank, item in enumerate(ids)])
@@ -211,6 +244,8 @@ def run_search(conn: sqlite3.Connection, studio: sqlite3.Connection, settings: S
 def _run_view(row: sqlite3.Row) -> dict:
     data = dict(row)
     data["filters"] = loads(data.pop("filters_json"), {})
+    data["provenance"] = loads(data.pop("provenance_json", None), {})
+    data["simulated"] = data["provenance"].get("source") == "api_simulada_teste"
     data["kind_label"] = KINDS[data["kind"]]
     data["fictional"] = data["data_origin"] == "demo"
     return data
@@ -250,7 +285,7 @@ def _channel_row(conn: sqlite3.Connection, settings: Settings, row: sqlite3.Row,
         "monitored": bool(row["monitored"]),
         "subscribers": (services.metric(count, "measured", "channels.list") if count is not None
                         else services.metric(None, "unavailable", "channels.list", "O canal oculta os inscritos ou ainda não foi medido.")),
-        "videos_collected": last["n"], "last_published_at": last["last"],
+        "videos_collected": last["n"], "last_published_at": last["last"], "text_refreshed_at": row["text_refreshed_at"],
     }
 
 
@@ -276,6 +311,9 @@ def run_items(conn: sqlite3.Connection, settings: Settings, run_id: str, *, chan
                 removed += 1
     state = policy_state(settings)
     notes = [FILTER_NOTES[key] for key in ("language", "country", "format") if run["filters"].get(key) and not run["fictional"]]
+    if run["filters"].get("format") in {"short", "long"} and not run["fictional"]:
+        notes.append(FORMAT_ONLY_INDETERMINATE)
+    notes.extend(run["provenance"].get("warnings", [])[:3])
     return {
         "run": run, "videos": videos, "channels": channels, "removed": removed, "total": len(all_items), "limit": limit, "offset": offset,
         "derived_allowed": state.derived_allowed, "filter_notes": notes,
@@ -304,7 +342,8 @@ def rerun(conn: sqlite3.Connection, studio: sqlite3.Connection, settings: Settin
     return run_search(conn, studio, settings, kind=run["kind"], query=run["query"], channel_id=run["managed_channel_id"], now=now,
                       language=filters.get("language"), country=filters.get("country"), days=filters.get("days"),
                       video_format=filters.get("format"), order=filters.get("order", "relevance"),
-                      max_subscribers=filters.get("max_subscribers"), factory=factory)
+                      max_subscribers=filters.get("max_subscribers"), factory=factory,
+                      tags={key: filters[key] for key in ("niche", "subniche", "discovery") if key in filters} or None)
 
 
 def _item_titles(conn: sqlite3.Connection, run_id: str) -> dict[tuple[str, str], dict]:

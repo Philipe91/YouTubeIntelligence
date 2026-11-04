@@ -17,7 +17,7 @@ from ..policy import policy_state
 from ..scheduler import ensure_jobs
 from ..studio.router import studio_conn
 from ..studio.store import StudioError, get_channel, list_channels
-from . import api_status, coach, competitors, explorer, feed, ideas, keywords, lab, research
+from . import api_status, coach, competitors, discovery, explorer, feed, ideas, keywords, lab, research
 from .common import ClientFactory, compatible, default_client
 
 router = APIRouter(prefix="/api/intel")
@@ -140,6 +140,50 @@ def rerun(run_id: str, conn=Depends(research_db), studio=Depends(studio_conn), s
 def delete_run(run_id: str, conn=Depends(research_db)):
     research.delete_run(conn, run_id)
     return {"deleted": run_id}
+
+
+# --- Descoberta para canais dark ------------------------------------------------------------------
+
+@router.get("/discovery/catalog")
+def discovery_catalog():
+    return discovery.catalog()
+
+
+class DiscoverBody(BaseModel):
+    target: str = "recent_videos"
+    niche: str | None = None
+    subniche: str | None = None
+    text: str | None = None
+    language: str | None = None
+    country: str | None = None
+    days: int | None = None
+    format: str | None = None
+    max_subscribers: int | None = None
+    channel_id: str | None = None
+
+
+@router.post("/discovery/search", status_code=201)
+def discovery_search(body: DiscoverBody, conn=Depends(research_db), studio=Depends(studio_conn), settings=Depends(settings_dep), factory=Depends(client_factory)):
+    return discovery.discover(conn, studio, settings, target=body.target, niche=body.niche or None, subniche=body.subniche or None, free_text=body.text, language=body.language,
+                              country=body.country, days=body.days, video_format=body.format or None, max_subscribers=body.max_subscribers, channel_id=body.channel_id or None, now=utcnow(), factory=factory)
+
+
+@router.get("/discovery/runs/{run_id}")
+def discovery_run(run_id: str, limit: int = Query(default=25, ge=1, le=50), offset: int = PageOffset, conn=Depends(research_db), studio=Depends(studio_conn), settings=Depends(settings_dep)):
+    return discovery.view(conn, studio, settings, run_id, limit=limit, offset=offset)
+
+
+class SaveItemBody(BaseModel):
+    item_type: str
+    item_id: str | None = None
+    text: str | None = None
+    note: str = ""
+    run_id: str | None = None
+
+
+@router.post("/channels/{channel_id}/saved-items", status_code=201)
+def saved_item_add(channel_id: str, body: SaveItemBody, conn=Depends(research_db), studio=Depends(studio_conn), settings=Depends(settings_dep)):
+    return discovery.save_item(conn, studio, settings, channel_id, item_type=body.item_type, item_id=body.item_id, text=body.text, note=body.note, run_id=body.run_id, now=utcnow())
 
 
 class LookupBody(BaseModel):
@@ -310,11 +354,12 @@ def opportunity_discard(channel_id: str, opportunity_id: str, conn=Depends(resea
 
 class ToIdeaBody(BaseModel):
     format: str
+    subject: str | None = None
 
 
 @router.post("/channels/{channel_id}/opportunities/{opportunity_id}/idea", status_code=201)
 def opportunity_idea(channel_id: str, opportunity_id: str, body: ToIdeaBody, conn=Depends(research_db), studio=Depends(studio_conn)):
-    return competitors.opportunity_to_idea(conn, studio, channel_id, opportunity_id, body.format, utcnow())
+    return competitors.opportunity_to_idea(conn, studio, channel_id, opportunity_id, body.format, utcnow(), body.subject)
 
 
 # --- Ideias diárias -------------------------------------------------------------------------------

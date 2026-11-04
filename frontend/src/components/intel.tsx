@@ -4,13 +4,29 @@ import type { ReactNode } from "react";
 import { Value } from "@/components/Mark";
 import { BandPill, Empty, Pill, SourceLink, Thumb } from "@/components/ui";
 import type { VideoRow } from "@/lib/api";
-import { compact, FORMAT_LABEL, shortDate, times } from "@/lib/format";
-import type { IntelContext } from "@/lib/intel";
+import { compact, dateTime, FORMAT_LABEL, shortDate, times } from "@/lib/format";
+import type { IntelContext, Run } from "@/lib/intel";
 
-export function OriginPill({ fictional }: { fictional: boolean }) {
+export function OriginPill({ fictional, simulated }: { fictional: boolean; simulated?: boolean }) {
+  if (simulated) return <Pill tone="warn" title="Resposta de um simulador local, usado em testes. Não veio do YouTube.">API simulada de teste</Pill>;
   return fictional
     ? <Pill tone="warn" title="Dados inventados para demonstração. Não representam nenhum canal real.">Dados fictícios</Pill>
     : <Pill tone="good" title="Veio das APIs oficiais do YouTube.">YouTube</Pill>;
+}
+
+/** De onde veio a pesquisa e quando os dados foram buscados. */
+export function ProvenanceNote({ run }: { run: Run }) {
+  const data = run.provenance;
+  if (run.fictional) return <p className="text-[0.8125rem] text-ink-3">Origem: dados fictícios deste aplicativo. Nenhuma chamada à internet.</p>;
+  if (!data.source) return <p className="text-[0.8125rem] text-ink-3">Pesquisa anterior ao registro de origem: sem detalhes de coleta.</p>;
+  const calls = data.api_calls ?? 0;
+  const cached = data.cache_hits ?? 0;
+  return (
+    <p className="text-[0.8125rem] text-ink-3">
+      Origem: {run.simulated ? "API simulada de teste, não o YouTube" : "YouTube Data API v3"}. {calls} {calls === 1 ? "chamada nova" : "chamadas novas"} e {cached} {cached === 1 ? "resposta" : "respostas"} do cache.
+      {data.oldest_data_at && ` Dados buscados em ${dateTime(data.oldest_data_at)}${data.newest_data_at && data.newest_data_at !== data.oldest_data_at ? ` a ${dateTime(data.newest_data_at)}` : ""}.`}
+    </p>
+  );
 }
 
 export function Notice({ tone = "info", title, children }: { tone?: "info" | "warn" | "bad"; title?: string; children: ReactNode }) {

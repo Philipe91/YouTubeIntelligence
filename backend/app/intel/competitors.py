@@ -256,10 +256,19 @@ def _md(text: str) -> str:
 
 def list_opportunities(conn: sqlite3.Connection, channel_id: str) -> list[dict]:
     rows = conn.execute(
-        """SELECT o.*, v.title AS video_title FROM editorial_opportunities o LEFT JOIN videos v ON v.id = o.video_id
+        """SELECT o.*, v.title AS video_title, c.title AS channel_title, c.handle AS channel_handle FROM editorial_opportunities o
+           LEFT JOIN videos v ON v.id = o.video_id LEFT JOIN channels c ON c.id = o.channel_ref
            WHERE o.managed_channel_id = ? ORDER BY CASE o.status WHEN 'aberta' THEN 0 ELSE 1 END, o.created_at DESC""", (channel_id,)
     ).fetchall()
-    return [{**dict(r), "source_url": services.video_url(r["video_id"]) if r["video_id"] else None} for r in rows]
+    output = []
+    for row in rows:
+        item = dict(row)
+        # Texto da API vem da base, sujeito à retenção. Se saiu de lá, o item aparece como removido.
+        item["removed"] = item["item_type"] != "tema" and not (item["video_title"] or item["channel_title"])
+        item["title"] = item["title"] or item["video_title"] or item["channel_title"] or "Item removido da base (prazo de 30 dias da API)"
+        item["source_url"] = services.video_url(row["video_id"]) if row["video_id"] else services.channel_url(row["channel_ref"]) if row["channel_ref"] else None
+        output.append(item)
+    return output
 
 
 def add_opportunity(conn: sqlite3.Connection, studio: sqlite3.Connection, settings: Settings, channel_id: str, title: str, note: str, video_id: str | None, now: datetime) -> dict:
@@ -289,11 +298,15 @@ def discard_opportunity(conn: sqlite3.Connection, channel_id: str, opportunity_i
     conn.commit()
 
 
-def opportunity_to_idea(conn: sqlite3.Connection, studio: sqlite3.Connection, channel_id: str, opportunity_id: str, video_format: str, now: datetime) -> dict:
+def opportunity_to_idea(conn: sqlite3.Connection, studio: sqlite3.Connection, channel_id: str, opportunity_id: str, video_format: str, now: datetime, subject: str | None = None) -> dict:
     row = _opportunity(conn, channel_id, opportunity_id)
     if row["status"] != "aberta":
         raise StudioError("opportunity_closed", "Esta oportunidade já foi tratada.", 409)
-    idea = recommend.create_owner_recommendation(studio, channel_id, subject=row["title"], justification=row["note"] or "Oportunidade registrada por você ao estudar referências.", video_format=video_format)
+    # Item salvo de vídeo ou canal não tem texto seu, e título da API não entra no banco do estúdio.
+    written = " ".join((subject or row["title"] or "").split())
+    if not written:
+        raise StudioError("subject_required", "Escreva com as suas palavras o assunto do vídeo.", 422)
+    idea = recommend.create_owner_recommendation(studio, channel_id, subject=written, justification=row["note"] or "Oportunidade registrada por você ao estudar referências.", video_format=video_format)
     # Toda ideia nasce com as três opções de título.
     idea = recommend.generate_titles(studio, channel_id, idea["id"])
     conn.execute("UPDATE editorial_opportunities SET status = 'virou_ideia', recommendation_id = ?, updated_at = ? WHERE id = ?", (idea["id"], to_iso(now), opportunity_id))

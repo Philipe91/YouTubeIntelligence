@@ -18,13 +18,21 @@ export interface ApiStatus {
 
 export interface Run {
   id: string; managed_channel_id: string | null; kind: string; kind_label: string; query: string;
-  filters: { language: string | null; country: string | null; days: number | null; format: string | null; order: string; max_subscribers: number | null };
-  data_origin: "demo" | "youtube"; fictional: boolean; total_results_approx: number | null; result_count: number; saved_name: string | null; executed_at: string;
+  filters: { language: string | null; country: string | null; days: number | null; format: string | null; order: string; max_subscribers: number | null; niche?: string | null; subniche?: string | null; discovery?: boolean };
+  data_origin: "demo" | "youtube"; fictional: boolean; simulated: boolean; total_results_approx: number | null; result_count: number; saved_name: string | null; executed_at: string;
+  provenance: Provenance;
+}
+export interface Provenance { source?: string; api_calls?: number; cache_hits?: number; methods?: string[]; oldest_data_at?: string | null; newest_data_at?: string | null; warnings?: string[] }
+export interface DiscoveryCatalog { note: string; targets: { key: string; label: string }[]; niches: { key: string; label: string; subniches: { key: string; label: string }[] }[] }
+export interface FormatEstimate { format: string; confidence: string; basis: string }
+export interface DiscoveryView extends RunView {
+  estimates: { label: string; value: number | null; note: string }[]; format_estimates: Record<string, FormatEstimate>;
+  hypotheses: { text: string; basis: string; kind: string }[]; hypotheses_note: string; channel: { id: string; name: string } | null; blocked_metrics: string | null; observed: { note: string };
 }
 export interface Page<T> { total: number; limit: number; offset: number; items: T[] }
 export interface ChannelResult {
   id: string; title: string; handle: string | null; country: string | null; language: string | null; thumbnail_url: string | null;
-  source_url: string | null; is_own: boolean; monitored: boolean; subscribers: Metric; videos_collected: number; last_published_at: string | null;
+  source_url: string | null; is_own: boolean; monitored: boolean; subscribers: Metric; videos_collected: number; last_published_at: string | null; text_refreshed_at: string;
 }
 export interface RunView {
   run: Run; videos: VideoRow[]; channels: ChannelResult[]; removed: number; total: number; limit: number; offset: number;
@@ -90,7 +98,7 @@ export interface CompetitorDetail {
   editorial?: Record<string, EditorialProfile> | null; title_patterns?: { pattern: string; videos: number }[]; recurring_subjects?: { term: string; videos: number }[];
   patterns_blocked?: boolean; reason?: string | null; origin_note?: string | null; study_ids?: string[];
 }
-export interface EditorialOpportunity { id: string; title: string; note: string; video_id: string | null; video_title: string | null; source_url: string | null; status: string; recommendation_id: string | null; created_at: string }
+export interface EditorialOpportunity { id: string; title: string; note: string; video_id: string | null; video_title: string | null; channel_ref: string | null; channel_title: string | null; item_type: string; niche: string | null; subniche: string | null; removed: boolean; source_url: string | null; status: string; recommendation_id: string | null; created_at: string }
 
 export interface IdeaSource { kind: string; label: string; url: string | null; fictional: boolean; verified?: boolean }
 export interface Idea {

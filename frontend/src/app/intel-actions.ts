@@ -59,6 +59,28 @@ export async function deleteRun(previous: ActionState, data: FormData): Promise<
   redirect("/pesquisa?aba=historico");
 }
 
+// --- Descoberta para canais dark ------------------------------------------------------------------
+
+export async function runDiscovery(previous: ActionState, data: FormData): Promise<ActionState> {
+  const [niche, subniche] = text(data, "topic").split("/");
+  const result = await intelWrite("/discovery/search", {
+    target: text(data, "target") || "recent_videos", niche: niche || null, subniche: subniche || null, text: text(data, "text") || null, language: text(data, "language") || null,
+    country: text(data, "country") || null, days: Number(text(data, "days")) || null, format: text(data, "format") || null, max_subscribers: Number(text(data, "max_subscribers")) || null,
+    channel_id: text(data, "channel_id") || null,
+  });
+  if (!result.ok) return { error: result.error, done: previous.done };
+  revalidatePath("/descobrir");
+  redirect(`/descobrir/${seg(String(result.data.id))}`);
+}
+
+export async function saveDiscoveryItem(previous: ActionState, data: FormData): Promise<ActionState> {
+  const channel = text(data, "channel_id");
+  if (!channel) return { error: "Associe a pesquisa a um canal para salvar.", done: previous.done };
+  return done(previous, await intelWrite(`/channels/${seg(channel)}/saved-items`, {
+    item_type: text(data, "item_type"), item_id: text(data, "item_id") || null, text: text(data, "text") || null, note: text(data, "note"), run_id: text(data, "run_id") || null,
+  }), `/descobrir/${text(data, "run_id")}`, "/descobrir");
+}
+
 // --- Keyword Intelligence ----------------------------------------------------------------------
 
 export async function lookupKeyword(previous: ActionState, data: FormData): Promise<ActionState> {
@@ -129,7 +151,7 @@ export async function discardOpportunity(previous: ActionState, data: FormData):
 
 export async function opportunityToIdea(previous: ActionState, data: FormData): Promise<ActionState> {
   const channel = text(data, "channel_id");
-  return done(previous, await intelWrite(`/channels/${seg(channel)}/opportunities/${seg(text(data, "opportunity_id"))}/idea`, { format: text(data, "format") }), `/canais/${channel}/concorrentes`, `/canais/${channel}`);
+  return done(previous, await intelWrite(`/channels/${seg(channel)}/opportunities/${seg(text(data, "opportunity_id"))}/idea`, { format: text(data, "format"), subject: text(data, "subject") || null }), `/canais/${channel}/concorrentes`, `/canais/${channel}`, "/descobrir");
 }
 
 // --- Ideias diárias ----------------------------------------------------------------------------

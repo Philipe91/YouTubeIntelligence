@@ -8,6 +8,7 @@ const GROUPS = [
     label: "Inteligência",
     items: [
       { href: "/", label: "Hoje" },
+      { href: "/descobrir", label: "Descobrir oportunidades" },
       { href: "/pesquisa", label: "Central de pesquisa" },
       { href: "/palavras", label: "Palavras-chave" },
       { href: "/explorer", label: "Outlier Explorer" },

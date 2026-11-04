@@ -37,7 +37,7 @@ function SearchForm({ context, channel }: { context: IntelContext; channel?: str
           <select name="days" className="field mt-1 w-full"><option value="">Qualquer data</option>{PERIODS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}</select>
         </label>
         <label className={FIELD}>Formato
-          <select name="format" className="field mt-1 w-full"><option value="">Todos</option><option value="short">Shorts</option><option value="long">Vídeos longos</option></select>
+          <select name="format" className="field mt-1 w-full"><option value="">Todos</option><option value="short">Shorts</option><option value="long">Vídeos longos</option><option value="indeterminate">Indeterminado</option></select>
         </label>
         <label className={FIELD}>Ordem
           <select name="order" className="field mt-1 w-full"><option value="relevance">Relevância</option><option value="date">Mais recentes</option><option value="viewCount">Mais views</option></select>
@@ -75,7 +75,7 @@ function RunTable({ data, channels, href }: { data: Page<Run>; channels: Map<str
                 <td className="text-[0.8125rem] text-ink-3">{[run.filters.language, run.filters.country, run.filters.days && `${run.filters.days} dias`, run.filters.format && FORMAT_LABEL[run.filters.format]].filter(Boolean).join(", ") || "Nenhum"}</td>
                 <td className="num">{run.result_count}</td>
                 <td className="whitespace-nowrap">{dateTime(run.executed_at)}</td>
-                <td><OriginPill fictional={run.fictional} /></td>
+                <td><OriginPill fictional={run.fictional} simulated={run.simulated} /></td>
               </tr>
             ))}
           </tbody>
@@ -136,7 +136,7 @@ export default async function ResearchCenter({ searchParams }: { searchParams: P
   return (
     <>
       <PageHeader title="Central de pesquisa" intro="Procure vídeos e canais, guarde o que encontrou, compare e exporte. Tudo fica associado ao canal que você escolher.">
-        <Pill tone={context.mode === "demo" ? "warn" : "good"}>{context.mode === "demo" ? "Modo demonstração" : "API do YouTube"}</Pill>
+        <Pill tone={context.mode === "demo" || context.api_target === "simulada" ? "warn" : "good"}>{context.mode === "demo" ? "Modo demonstração" : context.api_target === "simulada" ? "API simulada de teste" : "API do YouTube"}</Pill>
       </PageHeader>
       <Tabs items={TABS} current={tab} href={link} />
       {context.mode === "live" && !context.has_api_key && (
