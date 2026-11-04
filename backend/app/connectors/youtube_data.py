@@ -154,6 +154,7 @@ class YouTubeDataClient:
         return {
             "source": "api_simulada_teste" if self.settings.youtube_base_url else "youtube_data_api",
             "api_calls": sum(1 for item in self.trace if item["source"] == "api"),
+            "search_api_calls": sum(1 for item in self.trace if item["source"] == "api" and item["method"] == "search.list"),
             "cache_hits": sum(1 for item in self.trace if item["source"] == "cache"),
             "methods": sorted({item["method"] for item in self.trace}),
             "oldest_data_at": min(fetched) if fetched else None,

@@ -85,6 +85,48 @@ export async function saveDiscoveryItem(previous: ActionState, data: FormData): 
   }), `/descobrir/${text(data, "run_id")}`, "/descobrir");
 }
 
+// --- Pesquisas agendadas -----------------------------------------------------------------------------
+
+export async function approveAutomation(previous: ActionState, data: FormData): Promise<ActionState> {
+  return done(previous, await intelWrite("/automation/approve", { max_searches_per_day: Number(text(data, "max_searches_per_day")) }), "/automacao");
+}
+
+export async function revokeAutomation(previous: ActionState): Promise<ActionState> {
+  return done(previous, await intelWrite("/automation/revoke"), "/automacao");
+}
+
+export async function resumeAutomation(previous: ActionState): Promise<ActionState> {
+  return done(previous, await intelWrite("/automation/resume"), "/automacao");
+}
+
+export async function tickAutomation(previous: ActionState): Promise<ActionState> {
+  return done(previous, await intelWrite("/automation/tick"), "/automacao", "/pesquisa", "/descobrir");
+}
+
+export async function createSchedule(previous: ActionState, data: FormData): Promise<ActionState> {
+  const channel = text(data, "channel_id");
+  if (!channel) return { error: "Escolha um canal.", done: previous.done };
+  return done(previous, await intelWrite(`/channels/${seg(channel)}/schedules`, {
+    kind: text(data, "kind"), query: text(data, "query"), interval_hours: Number(text(data, "interval_hours")), language: text(data, "language") || null, country: text(data, "country") || null,
+    days: Number(text(data, "days")) || null, format: text(data, "format") || null,
+  }), "/automacao");
+}
+
+export async function scheduleFromRun(previous: ActionState, data: FormData): Promise<ActionState> {
+  return done(previous, await intelWrite(`/channels/${seg(text(data, "channel_id"))}/schedules/from-run`, { run_id: text(data, "run_id"), interval_hours: Number(text(data, "interval_hours")) }), "/automacao");
+}
+
+export async function updateSchedule(previous: ActionState, data: FormData): Promise<ActionState> {
+  const body: Record<string, unknown> = {};
+  if (text(data, "enabled")) body.enabled = text(data, "enabled") === "1";
+  if (text(data, "interval_hours")) body.interval_hours = Number(text(data, "interval_hours"));
+  return done(previous, await intelWrite(`/channels/${seg(text(data, "channel_id"))}/schedules/${seg(text(data, "schedule_id"))}/update`, body), "/automacao");
+}
+
+export async function deleteSchedule(previous: ActionState, data: FormData): Promise<ActionState> {
+  return done(previous, await intelWrite(`/channels/${seg(text(data, "channel_id"))}/schedules/${seg(text(data, "schedule_id"))}/delete`), "/automacao");
+}
+
 // --- Keyword Intelligence ----------------------------------------------------------------------
 
 export async function lookupKeyword(previous: ActionState, data: FormData): Promise<ActionState> {

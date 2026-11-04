@@ -10,6 +10,7 @@ const GROUPS = [
       { href: "/", label: "Hoje" },
       { href: "/descobrir", label: "Descobrir oportunidades" },
       { href: "/pesquisa", label: "Central de pesquisa" },
+      { href: "/automacao", label: "Pesquisas agendadas" },
       { href: "/palavras", label: "Palavras-chave" },
       { href: "/explorer", label: "Outlier Explorer" },
       { href: "/ideias", label: "Ideias diárias" },
@@ -33,6 +34,7 @@ const GROUPS = [
 const SECONDARY = [
   { href: "/sistema", label: "Sistema e cotas" },
   { href: "/metodologia", label: "Como calculamos" },
+  { href: "/privacidade", label: "Dados e privacidade" },
 ];
 
 function NavLink({ href, label }: { href: string; label: string }) {

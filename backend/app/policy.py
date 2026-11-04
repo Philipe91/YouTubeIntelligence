@@ -148,10 +148,26 @@ def apply_retention(conn: sqlite3.Connection, settings: Settings, now: datetime)
     removed["channels"] = conn.execute(
         "DELETE FROM channels WHERE text_refreshed_at < ?", (text_cutoff,)
     ).rowcount
+    # O total aproximado de resultados também veio da API. A pesquisa fica; o número sai depois do prazo.
+    cutoff_stats = to_iso(stats_cutoff)
+    removed["totals"] = conn.execute("UPDATE research_runs SET total_results_approx = NULL WHERE executed_at < ? AND total_results_approx IS NOT NULL", (cutoff_stats,)).rowcount
+    removed["totals"] += conn.execute("UPDATE searches SET total_results_approx = NULL WHERE executed_at < ? AND total_results_approx IS NOT NULL", (cutoff_stats,)).rowcount
+    removed["schedule_events"] = conn.execute("DELETE FROM schedule_events WHERE at < ?", (text_cutoff,)).rowcount
     # Respostas do Coach podem citar títulos e nomes: seguem o mesmo prazo do texto.
     removed["coach_conversations"] = conn.execute(
         "DELETE FROM coach_conversations WHERE updated_at < ?", (text_cutoff,)
     ).rowcount
+    conn.commit()
+    return removed
+
+
+def retention_if_due(conn: sqlite3.Connection, settings: Settings, now: datetime) -> dict[str, int] | None:
+    """Os 30 dias valem mesmo sem o agendador ligado: aplica ao abrir o banco real, no máximo uma vez por dia."""
+    row = conn.execute("SELECT value FROM intel_meta WHERE key = 'last_retention_at'").fetchone()
+    if row and now - from_iso(row["value"]) < timedelta(days=1):
+        return None
+    removed = apply_retention(conn, settings, now)
+    conn.execute("INSERT OR REPLACE INTO intel_meta (key, value) VALUES ('last_retention_at', ?)", (to_iso(now),))
     conn.commit()
     return removed
 

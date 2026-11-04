@@ -41,6 +41,8 @@ def main(argv: list[str] | None = None) -> int:
     delete = sub.add_parser("delete-channel-data", help="Apaga os dados locais de um canal")
     delete.add_argument("channel_id")
     sub.add_parser("retention", help="Aplica a política de retenção agora")
+    tick = sub.add_parser("research-tick", help="Roda as pesquisas agendadas vencidas. Com dados reais, exige limites aprovados")
+    tick.add_argument("--loop-seconds", type=int, default=0, help="Repete a cada N segundos. Mínimo: 300. Sem isto, roda uma vez")
     generate = sub.add_parser("generate", help="Gera ideias para um tema")
     generate.add_argument("topic")
     generate.add_argument("--format", choices=["short", "long"], required=True)
@@ -93,6 +95,19 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "delete-channel-data":
             delete_channel_data(conn, args.channel_id)
             print("Dados locais apagados.")
+        elif args.command == "research-tick":
+            from .intel import automation
+            from .studio.store import open_studio
+
+            studio = open_studio(settings)
+            try:
+                while True:
+                    print(json.dumps(automation.tick(conn, studio, settings, utcnow()), ensure_ascii=False), flush=True)
+                    if not args.loop_seconds:
+                        break
+                    time.sleep(max(args.loop_seconds, 300))
+            finally:
+                studio.close()
         elif args.command == "retention":
             print(json.dumps(apply_retention(conn, settings, now)))
         elif args.command == "generate":

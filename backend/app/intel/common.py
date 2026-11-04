@@ -105,6 +105,6 @@ def loads(text: str | None, default):
 
 def purge_channel(conn: sqlite3.Connection, channel_id: str) -> None:
     """Apaga do banco de pesquisa o que estava associado a um canal removido."""
-    for table in ("research_runs", "keyword_lookups", "study_videos", "editorial_opportunities", "coach_conversations"):
+    for table in ("research_runs", "keyword_lookups", "study_videos", "editorial_opportunities", "coach_conversations", "research_schedules"):
         conn.execute(f"DELETE FROM {table} WHERE managed_channel_id = ?", (channel_id,))
     conn.commit()

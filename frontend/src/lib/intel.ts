@@ -7,6 +7,17 @@ export interface IntelContext {
   other_channels: { id: string; name: string; is_demo: boolean }[];
 }
 
+export interface ResearchSchedule {
+  id: string; managed_channel_id: string; kind: string; kind_label: string; query: string; filters: Run["filters"]; interval_hours: number; interval_label: string; enabled: boolean; paused_reason: string | null;
+  consecutive_errors: number; next_run_at: string; last_run_at: string | null; last_status: string | null; last_error: string | null;
+}
+export interface AutomationGate {
+  mode: string; can_run: boolean; state: string; reason: string; real_enabled: boolean; max_searches_per_day: number; approved_at: string | null; approved_by: string | null; paused_until: string | null; paused_reason: string | null; used_today: number; target: string;
+}
+export interface AutomationOverview {
+  gate: AutomationGate; schedules: ResearchSchedule[]; events: { total: number; limit: number; offset: number; items: { id: number; schedule_id: string; at: string; status: string; run_id: string | null; message: string; query: string; managed_channel_id: string }[] };
+  intervals: { hours: number; label: string }[]; due_now: number; quota: { search_used: number; search_limit: number; quota_day: string }; max_approvable: number; max_per_channel: number;
+}
 export interface ApiCheck {
   checked_at: string; ok: boolean; kind: string; message: string; target: "google" | "simulada"; title: string; action: string;
   details: { steps?: { method: string; items: number; fields: Record<string, number> }[] };
@@ -108,11 +119,13 @@ export interface Idea {
   data_basis: string; origin: string; status: string; scheduled_on: string | null; facts_to_verify: string[];
 }
 export interface IdeasPage { total: number; limit: number; offset: number; counts: Record<string, number>; estimate_note: string; items: Idea[] }
-export interface CoachStatus { name: string; model: string | null; is_ai: boolean; suggestions: string[]; note: string }
-export interface CoachSection { text: string; refs: string[] }
+export interface CoachStatus { name: string; model: string | null; is_ai: boolean; suggestions: string[]; note: string; label: string }
+export interface CoachSection { text: string; why?: string; refs: string[] }
 export interface CoachContent {
   text?: string; observations?: CoachSection[]; hypotheses?: CoachSection[]; recommendations?: CoachSection[]; limitations?: string[];
   sources?: Record<string, { label: string; url: string | null }>; fictional?: boolean;
+  data_used?: { tool: string; label: string; ok: boolean; summary: string; items: number; limits: string[] }[];
+  generated_by?: { is_ai: boolean; label: string; note: string };
 }
 export interface CoachMessage {
   id: string; role: "user" | "assistant"; content: CoachContent; provider: string | null; model: string | null; is_ai: boolean; input_tokens: number | null; output_tokens: number | null;

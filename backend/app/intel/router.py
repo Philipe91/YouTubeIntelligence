@@ -13,11 +13,11 @@ from ..config import Settings
 from ..db import connect, migrate, utcnow
 from ..deps import settings_dep
 from ..metrics.text import normalize
-from ..policy import policy_state
+from ..policy import policy_state, retention_if_due
 from ..scheduler import ensure_jobs
 from ..studio.router import studio_conn
 from ..studio.store import StudioError, get_channel, list_channels
-from . import api_status, coach, competitors, discovery, explorer, feed, ideas, keywords, lab, research
+from . import api_status, automation, coach, competitors, discovery, explorer, feed, ideas, keywords, lab, research
 from .common import ClientFactory, compatible, default_client
 
 router = APIRouter(prefix="/api/intel")
@@ -31,6 +31,8 @@ def research_db(settings: Settings = Depends(settings_dep)) -> Iterator[sqlite3.
             if not demo.is_seeded(conn):
                 demo.seed_demo(conn, utcnow())
             keywords.seed_demo_terms(conn, utcnow())
+        else:
+            retention_if_due(conn, settings, utcnow())
         yield conn
     finally:
         conn.close()
@@ -184,6 +186,80 @@ class SaveItemBody(BaseModel):
 @router.post("/channels/{channel_id}/saved-items", status_code=201)
 def saved_item_add(channel_id: str, body: SaveItemBody, conn=Depends(research_db), studio=Depends(studio_conn), settings=Depends(settings_dep)):
     return discovery.save_item(conn, studio, settings, channel_id, item_type=body.item_type, item_id=body.item_id, text=body.text, note=body.note, run_id=body.run_id, now=utcnow())
+
+
+# --- Pesquisas agendadas --------------------------------------------------------------------------
+
+@router.get("/automation")
+def automation_overview(channel_id: str | None = None, limit: int = PageLimit, offset: int = PageOffset, conn=Depends(research_db), studio=Depends(studio_conn), settings=Depends(settings_dep)):
+    return automation.overview(conn, studio, settings, utcnow(), channel_id, limit, offset)
+
+
+class ApproveBody(BaseModel):
+    max_searches_per_day: int
+
+
+@router.post("/automation/approve")
+def automation_approve(body: ApproveBody, conn=Depends(research_db), settings=Depends(settings_dep)):
+    return automation.approve(conn, settings, body.max_searches_per_day, utcnow())
+
+
+@router.post("/automation/revoke")
+def automation_revoke(conn=Depends(research_db), settings=Depends(settings_dep)):
+    return automation.revoke(conn, settings, utcnow())
+
+
+@router.post("/automation/resume")
+def automation_resume(conn=Depends(research_db), settings=Depends(settings_dep)):
+    return automation.resume(conn, settings, utcnow())
+
+
+@router.post("/automation/tick")
+def automation_tick(conn=Depends(research_db), studio=Depends(studio_conn), settings=Depends(settings_dep), factory=Depends(client_factory)):
+    return automation.tick(conn, studio, settings, utcnow(), factory)
+
+
+class ScheduleBody(BaseModel):
+    kind: str = "recent"
+    query: str
+    interval_hours: int = 168
+    language: str | None = None
+    country: str | None = None
+    days: int | None = None
+    format: str | None = None
+    max_subscribers: int | None = None
+
+
+@router.post("/channels/{channel_id}/schedules", status_code=201)
+def schedule_create(channel_id: str, body: ScheduleBody, conn=Depends(research_db), studio=Depends(studio_conn), settings=Depends(settings_dep)):
+    filters = {"language": body.language, "country": body.country, "days": body.days, "format": body.format or None, "max_subscribers": body.max_subscribers}
+    return automation.create(conn, studio, settings, channel_id, kind=body.kind, query=body.query, filters=filters, interval_hours=body.interval_hours, now=utcnow())
+
+
+class ScheduleFromRun(BaseModel):
+    run_id: str
+    interval_hours: int = 168
+
+
+@router.post("/channels/{channel_id}/schedules/from-run", status_code=201)
+def schedule_from_run(channel_id: str, body: ScheduleFromRun, conn=Depends(research_db), studio=Depends(studio_conn), settings=Depends(settings_dep)):
+    return automation.create_from_run(conn, studio, settings, channel_id, body.run_id, body.interval_hours, utcnow())
+
+
+class SchedulePatch(BaseModel):
+    enabled: bool | None = None
+    interval_hours: int | None = None
+
+
+@router.post("/channels/{channel_id}/schedules/{schedule_id}/update")
+def schedule_update(channel_id: str, schedule_id: str, body: SchedulePatch, conn=Depends(research_db)):
+    return automation.update(conn, channel_id, schedule_id, enabled=body.enabled, interval_hours=body.interval_hours, now=utcnow())
+
+
+@router.post("/channels/{channel_id}/schedules/{schedule_id}/delete")
+def schedule_delete(channel_id: str, schedule_id: str, conn=Depends(research_db)):
+    automation.delete(conn, channel_id, schedule_id)
+    return {"deleted": schedule_id}
 
 
 class LookupBody(BaseModel):

@@ -9,7 +9,7 @@ import type { VideoRow } from "@/lib/api";
 import { compact, dateTime, FORMAT_LABEL } from "@/lib/format";
 import { intelGetOrNull, type ChannelResult, type DiscoveryView, type FormatEstimate } from "@/lib/intel";
 
-import { saveDiscoveryItem } from "../../intel-actions";
+import { saveDiscoveryItem, scheduleFromRun } from "../../intel-actions";
 
 const CONFIDENCE: Record<string, { label: string; tone: "good" | "info" | "warn" | "neutral" }> = {
   confirmado: { label: "Formato confirmado", tone: "good" }, confiavel: { label: "Formato confiável", tone: "good" },
@@ -124,6 +124,13 @@ export default async function DiscoveryResult({ params, searchParams }: { params
                     <label className="block text-[0.8125rem] text-ink-2">Sua hipótese ou nota<textarea name="note" rows={2} maxLength={1000} className="field mt-1 mb-2 w-full" /></label>
                   </ActionForm>
                   <p className="mt-2 text-[0.8125rem]"><Link className="text-cobalt underline underline-offset-2" href={`/descobrir?aba=salvos&canal=${channelId}`}>Ver o que está salvo neste canal</Link></p>
+                  <div className="mt-4 border-t border-line pt-3">
+                    <SectionTitle>Repetir esta pesquisa</SectionTitle>
+                    <ActionForm action={scheduleFromRun} submit="Agendar" tone="quiet" hidden={{ channel_id: channelId, run_id: run.id }} className="mt-2 flex flex-wrap items-end gap-2" doneMessage="Agendada.">
+                      <label className="text-[0.8125rem] text-ink-2">Periodicidade<select name="interval_hours" defaultValue="168" className="field mt-1 block"><option value="24">Todo dia</option><option value="72">A cada 3 dias</option><option value="168">Toda semana</option><option value="720">Todo mês</option></select></label>
+                    </ActionForm>
+                    <p className="mt-1 text-[0.75rem] text-ink-3">Agendar não liga nada. <Link className="underline" href="/automacao">Veja as condições em Pesquisas agendadas.</Link></p>
+                  </div>
                 </div>
               )}
             </Panel>

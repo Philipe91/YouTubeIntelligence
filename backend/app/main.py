@@ -18,7 +18,7 @@ from .db import connect, migrate, utcnow
 from .deps import settings_dep
 from .intel import router as intel_router
 from .logging_safe import install_redaction, redact
-from .policy import PolicyBlocked
+from .policy import PolicyBlocked, retention_if_due
 from .scheduler import ensure_jobs
 from .studio import router as studio_router
 from .studio.store import StudioError
@@ -42,6 +42,8 @@ def conn_dep(settings: Settings = Depends(settings_dep)) -> Iterator[sqlite3.Con
         ensure_jobs(conn)
         if settings.mode == "demo" and not demo.is_seeded(conn):
             demo.seed_demo(conn, utcnow())
+        if settings.mode == "live":
+            retention_if_due(conn, settings, utcnow())
         yield conn
     finally:
         conn.close()
