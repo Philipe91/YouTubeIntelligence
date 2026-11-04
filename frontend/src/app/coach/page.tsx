@@ -13,40 +13,55 @@ function money(value: number): string {
   return `US$ ${value.toLocaleString("pt-BR", { minimumFractionDigits: 3, maximumFractionDigits: 3 })}`;
 }
 
-function Block({ title, items, tone }: { title: string; items?: CoachSection[]; tone: string }) {
+function SourceAnchor({ source }: { source: { label: string; url: string | null } }) {
+  if (source.url?.startsWith("/")) return <Link className="text-cobalt underline underline-offset-2" href={source.url}>{source.label}</Link>;
+  if (source.url) return <a className="text-cobalt underline underline-offset-2" href={source.url} target="_blank" rel="noreferrer noopener">{source.label}</a>;
+  return <>{source.label}</>;
+}
+
+function Block({ title, items, tone, sources }: { title: string; items?: CoachSection[]; tone: string; sources: Record<string, { label: string; url: string | null }> }) {
   if (!items?.length) return null;
   return (
     <section className={`border-l-2 pl-3 ${tone}`}>
       <h3 className="text-[0.8125rem] font-semibold text-ink">{title}</h3>
-      <ul className="mt-1 space-y-1.5 text-sm leading-relaxed text-ink-2">{items.map((item) => <li key={item.text}>{item.text}</li>)}</ul>
+      <ul className="mt-1 space-y-2 text-sm leading-relaxed text-ink-2">
+        {items.map((item) => (
+          <li key={item.text}>
+            {item.text}
+            {item.why && <span className="mt-0.5 block text-[0.8125rem] text-ink-3">Por quê: {item.why}</span>}
+            {item.refs.some((ref) => sources[ref]) && (
+              <span className="mt-0.5 block text-[0.75rem] text-ink-3">Fonte: {item.refs.filter((ref) => sources[ref]).map((ref, index) => <span key={ref}>{index > 0 && ", "}<SourceAnchor source={sources[ref]} /></span>)}</span>
+            )}
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
 
 function Answer({ message }: { message: CoachMessage }) {
   const { content } = message;
-  const sources = Object.entries(content.sources ?? {});
+  const sources = content.sources ?? {};
   const empty = !content.observations?.length && !content.hypotheses?.length && !content.recommendations?.length;
   return (
     <div className="space-y-3">
-      {content.fictional && <OriginPill fictional />}
+      <div className="flex flex-wrap items-center gap-1.5">
+        {content.fictional && <OriginPill fictional />}
+        {content.generated_by && <span title={content.generated_by.note}><Pill tone={content.generated_by.is_ai ? "info" : "neutral"}>{content.generated_by.label}</Pill></span>}
+      </div>
+      {content.generated_by && !content.generated_by.is_ai && <p className="text-[0.8125rem] text-ink-3">{content.generated_by.note}</p>}
       {empty && <p className="text-sm text-ink-2">Os dados deste canal não bastam para uma resposta fundamentada. Veja o que falta abaixo.</p>}
-      <Block title="Observações" items={content.observations} tone="border-good" />
-      <Block title="Hipóteses" items={content.hypotheses} tone="border-ochre" />
-      <Block title="Recomendações" items={content.recommendations} tone="border-cobalt" />
+      <Block title="Observações" items={content.observations} tone="border-good" sources={sources} />
+      <Block title="Hipóteses" items={content.hypotheses} tone="border-ochre" sources={sources} />
+      <Block title="Recomendações" items={content.recommendations} tone="border-cobalt" sources={sources} />
       {content.limitations && content.limitations.length > 0 && (
         <section><h3 className="text-[0.8125rem] font-semibold text-ink">Limites desta resposta</h3><ul className="mt-1 list-disc space-y-0.5 pl-4 text-[0.8125rem] text-ink-3">{content.limitations.map((item) => <li key={item}>{item}</li>)}</ul></section>
       )}
-      {sources.length > 0 && (
+      {content.data_used && content.data_used.length > 0 && (
         <section>
-          <h3 className="text-[0.8125rem] font-semibold text-ink">Fontes</h3>
-          <ul className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[0.8125rem]">
-            {sources.map(([key, source]) => (
-              <li key={key}>
-                {source.url?.startsWith("/") ? <Link className="text-cobalt underline underline-offset-2" href={source.url}>{source.label}</Link>
-                  : source.url ? <a className="text-cobalt underline underline-offset-2" href={source.url} target="_blank" rel="noreferrer noopener">{source.label}</a> : source.label}
-              </li>
-            ))}
+          <h3 className="text-[0.8125rem] font-semibold text-ink">Dados consultados</h3>
+          <ul className="mt-1 space-y-0.5 text-[0.8125rem] text-ink-2">
+            {content.data_used.map((item) => <li key={`${item.tool}-${item.summary}`}><span className={item.ok && item.items > 0 ? "text-good" : "text-ink-3"}>{item.ok ? (item.items > 0 ? "Com dados" : "Sem dados") : "Falhou"}:</span> {item.summary}</li>)}
           </ul>
         </section>
       )}
@@ -82,7 +97,7 @@ export default async function Coach({ searchParams }: { searchParams: Promise<Re
   return (
     <>
       <PageHeader title="Coach" intro="Pergunte sobre um canal. As respostas consultam só os dados deste aplicativo e separam o que é fato, hipótese e recomendação.">
-        <Pill tone={status.is_ai ? "info" : "neutral"} title={status.note}>{status.is_ai ? `Claude: ${status.model}` : "Sem IA"}</Pill>
+        <Pill tone={status.is_ai ? "info" : "neutral"} title={status.note}>{status.label}</Pill>
       </PageHeader>
       <form action="/coach" className="mb-4 flex flex-wrap items-center gap-2">
         <label htmlFor="canal-coach" className="text-sm text-ink-2">Canal</label>

@@ -263,7 +263,7 @@ def test_rule_answer_separates_sections_with_real_sources_and_no_cost(demo_db, s
     assert all(ref in content["sources"] for item in content["observations"] for ref in item["refs"])
     assert answer["provider"] == "regras_sem_ia" and answer["is_ai"] is False and answer["cost_usd"] is None
     assert any("sem IA" in limit for limit in content["limitations"])
-    assert {t["tool"] for t in answer["tools"]} == {"ideias", "palavras_para_canal", "perfil_canal"} and all(t["ok"] for t in answer["tools"])
+    assert {t["tool"] for t in answer["tools"]} == {"ideias", "resultados_pesquisa", "itens_salvos", "perfil_canal"} and all(t["ok"] for t in answer["tools"])
 
 
 def test_empty_channel_gets_limits_instead_of_invention(demo_db, studio, demo_cfg):
