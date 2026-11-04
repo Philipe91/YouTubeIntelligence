@@ -1,0 +1,6 @@
+{
+ "executado_em": "2026-11-04T10:30:09Z",
+ "alvo": "google",
+ "estado": "pendente",
+ "motivo": "YOUTUBE_API_KEY não configurada. Nenhuma consulta com dados foi feita."
+}

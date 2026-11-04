@@ -206,7 +206,7 @@ def test_migration_keeps_rows_and_marks_real_short_guesses_as_indeterminate(tmp_
                      (video_id, stamp, video_format, source, stamp, stamp))
         conn.execute("INSERT INTO snapshots (video_id, captured_at, view_count) VALUES (?, ?, 5)", (video_id, stamp))
     conn.commit()
-    assert migrate(conn) == ["002_video_format.sql", "003_intelligence.sql"]
+    assert migrate(conn) == ["002_video_format.sql", "003_intelligence.sql", "004_api_real.sql"]
     result = {r["id"]: (r["format"], r["format_source"]) for r in conn.execute("SELECT id, format, format_source FROM videos")}
     assert result == {"real_curto": ("indeterminate", "duration"), "real_longo": ("long", "duration"), "real_live": ("live", "broadcast"), "DEMO_V1": ("short", "fictional")}
     assert conn.execute("SELECT COUNT(*) FROM snapshots").fetchone()[0] == 4, "recriar a tabela não pode apagar snapshots"

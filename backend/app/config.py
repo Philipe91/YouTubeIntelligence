@@ -7,6 +7,7 @@ import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 from dotenv import load_dotenv
 
@@ -83,6 +84,7 @@ class Settings:
     artifact_roots: tuple[str, ...] = ()
     legacy_approval_env_set: bool = False
     api_token: str = ""  # Vazio recusa toda ação protegida: falha fechada.
+    youtube_base_url: str = ""  # Só para teste: API simulada neste computador. A tela e as evidências avisam.
     scoring: dict[str, Any] = field(default_factory=load_scoring)
     quota: dict[str, Any] = field(default_factory=load_quota)
     execution: dict[str, Any] = field(default_factory=load_execution)
@@ -101,6 +103,10 @@ class Settings:
     def studio_db_path(self) -> Path:
         # Cadastros dos seus canais: independem do modo e não guardam dados da API.
         return self.data_dir / "studio.sqlite"
+
+    @property
+    def api_target(self) -> str:
+        return "simulada" if self.youtube_base_url else "google"
 
     def quota_limits(self) -> dict[str, int]:
         """Limite local por balde, nunca acima do limite conhecido do Google."""
@@ -133,6 +139,14 @@ def load_api_token(data_dir: Path) -> str:
         return ""
 
 
+def loopback_base_url() -> str:
+    """Endereço alternativo da API, aceito só neste computador: a chave nunca vai para outro host."""
+    value = os.getenv("YTI_YOUTUBE_BASE_URL", "").strip()
+    if value and urlparse(value).hostname not in {"127.0.0.1", "localhost"}:
+        raise ValueError("YTI_YOUTUBE_BASE_URL só aceita 127.0.0.1 ou localhost.")
+    return value
+
+
 def get_settings() -> Settings:
     load_dotenv(ROOT_DIR / ".env", override=False)
     mode = os.getenv("YTI_MODE", "demo").strip().lower()
@@ -156,6 +170,7 @@ def get_settings() -> Settings:
         ai_model=os.getenv("YTI_AI_MODEL", "claude-opus-5-5").strip(),
         quota_overrides=overrides,
         artifact_roots=roots,
+        youtube_base_url=loopback_base_url(),
         legacy_approval_env_set=bool(os.getenv(LEGACY_APPROVAL_ENV, "").strip()),
         quota=quota,
         **extra,

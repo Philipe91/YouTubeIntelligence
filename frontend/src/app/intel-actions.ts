@@ -19,6 +19,12 @@ function done(previous: ActionState, result: WriteResult, ...paths: string[]): A
   return { error: null, done: previous.done + 1 };
 }
 
+// --- Conexão com a YouTube Data API --------------------------------------------------------------
+
+export async function checkYouTubeApi(previous: ActionState, data: FormData): Promise<ActionState> {
+  return done(previous, await intelWrite("/api-status/check", { with_search: text(data, "with_search") === "1" }), "/sistema");
+}
+
 // --- Research Center --------------------------------------------------------------------------
 
 export async function runResearch(previous: ActionState, data: FormData): Promise<ActionState> {

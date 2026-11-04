@@ -17,7 +17,7 @@ from ..policy import policy_state
 from ..scheduler import ensure_jobs
 from ..studio.router import studio_conn
 from ..studio.store import StudioError, get_channel, list_channels
-from . import coach, competitors, explorer, feed, ideas, keywords, lab, research
+from . import api_status, coach, competitors, explorer, feed, ideas, keywords, lab, research
 from .common import ClientFactory, compatible, default_client
 
 router = APIRouter(prefix="/api/intel")
@@ -56,10 +56,26 @@ def context(studio=Depends(studio_conn), settings=Depends(settings_dep)):
     state = policy_state(settings)
     channels = list_channels(studio)
     return {
-        "mode": settings.mode, "derived_allowed": state.derived_allowed, "policy_state": state.state, "has_api_key": bool(settings.youtube_api_key),
+        "mode": settings.mode, "derived_allowed": state.derived_allowed, "policy_state": state.state, "has_api_key": bool(settings.youtube_api_key), "api_target": settings.api_target,
         "channels": [{"id": c["id"], "name": c["name"], "is_demo": c["is_demo"], "language": c["language"], "niche": c["niche"]} for c in channels if compatible(c, settings)],
         "other_channels": [{"id": c["id"], "name": c["name"], "is_demo": c["is_demo"]} for c in channels if not compatible(c, settings)],
     }
+
+
+# --- Conexão com a YouTube Data API ---------------------------------------------------------------
+
+@router.get("/api-status")
+def youtube_api_status(settings=Depends(settings_dep)):
+    return api_status.status(settings, utcnow())
+
+
+class ApiCheckBody(BaseModel):
+    with_search: bool = False
+
+
+@router.post("/api-status/check")
+def youtube_api_check(body: ApiCheckBody, settings=Depends(settings_dep), factory=Depends(client_factory)):
+    return api_status.run_check(settings, factory, utcnow(), body.with_search)
 
 
 class SearchBody(BaseModel):

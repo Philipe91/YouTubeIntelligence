@@ -1,6 +1,11 @@
+import { ActionForm } from "@/components/ActionForm";
+import { Notice } from "@/components/intel";
 import { PageHeader, Panel, Pill, SectionTitle } from "@/components/ui";
 import { api, type SystemStatus } from "@/lib/api";
 import { dateTime, integer } from "@/lib/format";
+import { intelGet, type ApiStatus } from "@/lib/intel";
+
+import { checkYouTubeApi } from "../intel-actions";
 
 const STATE_LABEL: Record<string, string> = {
   demo: "Demonstração",
@@ -13,6 +18,48 @@ const JOB_LABEL: Record<string, string> = {
 };
 const JOB_STATUS: Record<string, string> = { ok: "Concluída", erro: "Falhou", sem_cota: "Sem cota" };
 
+function YouTubeConnection({ status }: { status: ApiStatus }) {
+  const last = status.last_check;
+  return (
+    <Panel className="p-5 lg:col-span-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <SectionTitle>Conexão com a YouTube Data API</SectionTitle>
+        {status.target === "simulada"
+          ? <Pill tone="warn">API simulada de teste</Pill>
+          : status.validation_state === "validada" ? <Pill tone="good">Consulta real confirmada</Pill> : <Pill tone="warn">Validação real pendente</Pill>}
+      </div>
+      {status.last_real_validation
+        ? <p className="mt-2 text-sm text-ink-2">Última consulta real bem-sucedida: {dateTime(status.last_real_validation.checked_at)}.</p>
+        : <p className="mt-2 text-sm text-ink-2">Nenhuma consulta com dados reais foi concluída neste computador.</p>}
+      {status.key_configured ? (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <ActionForm action={checkYouTubeApi} submit="Testar conexão" pending="Testando..." tone="quiet" doneMessage="Teste concluído." />
+          <ActionForm action={checkYouTubeApi} submit="Testar com uma busca" pending="Testando..." tone="quiet" hidden={{ with_search: "1" }} doneMessage="Teste concluído." />
+          <span className="text-[0.8125rem] text-ink-3">O primeiro usa 1 unidade. O segundo usa 2 unidades e 1 das 100 buscas do dia.</span>
+        </div>
+      ) : (
+        <div className="mt-3">
+          <Notice tone="warn" title={status.no_key.title}>{status.no_key.action}</Notice>
+          <ol className="mt-3 list-decimal space-y-1 pl-5 text-sm leading-relaxed text-ink-2">{status.setup_steps.map((step) => <li key={step}>{step}</li>)}</ol>
+          <p className="mt-2 text-[0.8125rem] text-ink-3">Guia completo em <code>{status.setup_doc}</code>.</p>
+        </div>
+      )}
+      {last && (
+        <div className="mt-3">
+          <Notice tone={last.ok ? "info" : "bad"} title={`${last.title}, em ${dateTime(last.checked_at)}`}>
+            {last.message} {last.action}
+            {last.details.steps && last.details.steps.length > 0 && (
+              <ul className="mt-1 list-disc pl-4 text-[0.8125rem]">
+                {last.details.steps.map((step) => <li key={step.method}><code>{step.method}</code>: {step.items} {step.items === 1 ? "item" : "itens"} com formato válido.</li>)}
+              </ul>
+            )}
+          </Notice>
+        </div>
+      )}
+    </Panel>
+  );
+}
+
 function Check({ ok, label, missing }: { ok: boolean; label: string; missing: string }) {
   return (
     <li className="flex items-center justify-between gap-3 py-1.5 text-sm">
@@ -23,12 +70,13 @@ function Check({ ok, label, missing }: { ok: boolean; label: string; missing: st
 }
 
 export default async function System() {
-  const data = await api<SystemStatus>("/api/system");
+  const [data, youtube] = await Promise.all([api<SystemStatus>("/api/system"), intelGet<ApiStatus>("/api-status")]);
   const approvalNeeded = data.policy.state !== "live_approved";
   return (
     <>
       <PageHeader title="Sistema e cotas" intro="Estado do aplicativo, credenciais, consumo de cota e tarefas de coleta." />
       <div className="grid gap-4 lg:grid-cols-2">
+        <YouTubeConnection status={youtube} />
         <Panel className="p-5">
           <div className="flex flex-wrap items-center gap-2"><SectionTitle>Política da API</SectionTitle><Pill tone={data.policy.derived_allowed ? "good" : "bad"}>{STATE_LABEL[data.policy.state]}</Pill></div>
           <p className="mt-2 text-sm text-ink-2">{data.policy.description}</p>

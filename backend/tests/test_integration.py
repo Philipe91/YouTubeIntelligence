@@ -777,6 +777,6 @@ def test_system_endpoint_exposes_no_secret(tmp_path):
 
 def test_migrations_are_idempotent(tmp_path):
     conn = connect(tmp_path / "x.sqlite")
-    assert migrate(conn) == ["001_init.sql", "002_video_format.sql", "003_intelligence.sql"]
+    assert migrate(conn) == ["001_init.sql", "002_video_format.sql", "003_intelligence.sql", "004_api_real.sql"]
     assert migrate(conn) == []
     conn.close()

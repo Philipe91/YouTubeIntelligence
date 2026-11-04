@@ -125,11 +125,15 @@ def collect_channel_videos(client: YouTubeDataClient, conn: sqlite3.Connection, 
 def _hydrate_videos(client: YouTubeDataClient, conn: sqlite3.Connection, settings: Settings, ids: list[str],
                     now: datetime, use_cache: bool) -> list[dict]:
     items: list[dict] = []
+    # Resposta do cache mantém a data da busca original: não vira uma medição nova.
+    measured: list[tuple[dict, datetime]] = []
     for start in range(0, len(ids), 50):
-        items.extend(client.videos(ids[start:start + 50], use_cache=use_cache).get("items", []))
+        batch = client.videos(ids[start:start + 50], use_cache=use_cache).get("items", [])
+        items.extend(batch)
+        measured.extend((item, client.last_fetched_at or now) for item in batch)
     _ensure_channels(client, conn, {item["snippet"]["channelId"] for item in items}, now)
-    for item in items:
-        upsert_video(conn, item, now, settings)
+    for item, moment in measured:
+        upsert_video(conn, item, moment, settings)
     conn.commit()
     return items
 
@@ -139,7 +143,15 @@ def _ensure_channels(client: YouTubeDataClient, conn: sqlite3.Connection, channe
     missing = sorted(channel_ids - known)
     for start in range(0, len(missing), 50):
         for item in client.channels(ids=missing[start:start + 50]).get("items", []):
-            upsert_channel(conn, item, now)
+            upsert_channel(conn, item, client.last_fetched_at or now)
+    conn.commit()
+
+
+def refresh_channel_stats(client: YouTubeDataClient, conn: sqlite3.Connection, channel_ids: list[str], now: datetime) -> None:
+    """Inscritos atuais antes de filtrar por tamanho. O cache de 6 horas evita gastar à toa."""
+    for start in range(0, len(channel_ids), 50):
+        for item in client.channels(ids=channel_ids[start:start + 50]).get("items", []):
+            upsert_channel(conn, item, client.last_fetched_at or now)
     conn.commit()
 
 

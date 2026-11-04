@@ -48,9 +48,19 @@ class QuotaLedger:
         ).fetchone()
         return int(row["total"])
 
+    def refused_today(self, bucket: str, moment: datetime) -> bool:
+        """O Google já disse que acabou. Insistir só gera erro até a virada do dia de cota."""
+        row = self.conn.execute(
+            "SELECT 1 FROM api_calls WHERE quota_day = ? AND bucket = ? AND error_reason IN ('quotaExceeded', 'dailyLimitExceeded', 'dailyLimitExceededUnreg') LIMIT 1",
+            (quota_day(moment), bucket),
+        ).fetchone()
+        return row is not None
+
     def check(self, method: str, moment: datetime) -> None:
         bucket, units = self.cost(method)
         limit = self.limits[bucket]
+        if self.refused_today(bucket, moment):
+            raise BudgetExceeded(f"O Google recusou por cota hoje no balde '{bucket}'. Nada será chamado até a virada do dia de cota.")
         if self.used(bucket, moment) + units > limit:
             raise BudgetExceeded(f"Limite local de cota atingido no balde '{bucket}' ({limit} unidades por dia).")
 

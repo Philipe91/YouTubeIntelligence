@@ -2,9 +2,18 @@ import { API_URL, authHeaders, type WriteResult } from "@/lib/studio";
 import type { Metric, VideoRow } from "@/lib/api";
 
 export interface IntelContext {
-  mode: "demo" | "live"; derived_allowed: boolean; policy_state: string; has_api_key: boolean;
+  mode: "demo" | "live"; derived_allowed: boolean; policy_state: string; has_api_key: boolean; api_target: "google" | "simulada";
   channels: { id: string; name: string; is_demo: boolean; language: string; niche: string }[];
   other_channels: { id: string; name: string; is_demo: boolean }[];
+}
+
+export interface ApiCheck {
+  checked_at: string; ok: boolean; kind: string; message: string; target: "google" | "simulada"; title: string; action: string;
+  details: { steps?: { method: string; items: number; fields: Record<string, number> }[] };
+}
+export interface ApiStatus {
+  mode: "demo" | "live"; key_configured: boolean; target: "google" | "simulada"; last_check: ApiCheck | null; last_real_validation: ApiCheck | null;
+  validation_state: "validada" | "pendente"; setup_steps: string[]; setup_doc: string; no_key: { title: string; action: string };
 }
 
 export interface Run {

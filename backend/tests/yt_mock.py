@@ -55,9 +55,18 @@ class FakeYouTube:
         if path.endswith("/playlistItems"):
             return self._json({"items": [{"contentDetails": {"videoId": v}} for v in self.videos]})
         if path.endswith("/search"):
-            return self._json({"pageInfo": {"totalResults": 12345},
-                               "items": [{"id": {"videoId": v}} for v in self.videos]})
+            if params.get("type") == "channel":
+                return self._json({"kind": "youtube#searchListResponse", "pageInfo": {"totalResults": 1, "resultsPerPage": 25},
+                                   "items": [{"kind": "youtube#searchResult", "id": {"kind": "youtube#channel", "channelId": self.channel["id"]},
+                                              "snippet": {"channelId": self.channel["id"], "publishedAt": "2020-01-01T00:00:00Z", "title": self.channel["snippet"]["title"]}}]})
+            return self._json({"kind": "youtube#searchListResponse", "pageInfo": {"totalResults": 12345, "resultsPerPage": 50},
+                               "items": [{"kind": "youtube#searchResult", "id": {"kind": "youtube#video", "videoId": v},
+                                          "snippet": {"channelId": "UCfake1", "publishedAt": self.videos[v]["snippet"]["publishedAt"], "title": self.videos[v]["snippet"]["title"]}}
+                                         for v in self.videos]})
         if path.endswith("/videos"):
+            # Igual à documentação oficial: maxResults não combina com id.
+            if "maxResults" in params and "id" in params:
+                return error_response(400, "badRequest")
             ids = params["id"].split(",")
             items = []
             for vid in ids:
@@ -75,4 +84,15 @@ class FakeYouTube:
 
 
 def error_response(status: int, reason: str, headers=None) -> httpx.Response:
-    return httpx.Response(status, headers=headers, json={"error": {"errors": [{"reason": reason}]}})
+    return httpx.Response(status, headers=headers, json={"error": {"code": status, "message": reason, "errors": [{"message": reason, "domain": "global", "reason": reason}]}})
+
+
+# Corpos reais, capturados do Google em 04/11/2026 com `curl`, sem nenhuma chave válida.
+REAL_INVALID_KEY = {"error": {"code": 400, "message": "API key not valid. Please pass a valid API key.",
+                              "errors": [{"message": "API key not valid. Please pass a valid API key.", "domain": "global", "reason": "badRequest"}],
+                              "status": "INVALID_ARGUMENT",
+                              "details": [{"@type": "type.googleapis.com/google.rpc.ErrorInfo", "reason": "API_KEY_INVALID", "domain": "googleapis.com", "metadata": {"service": "youtube.googleapis.com"}},
+                                          {"@type": "type.googleapis.com/google.rpc.LocalizedMessage", "locale": "en-US", "message": "API key not valid. Please pass a valid API key."}]}}
+REAL_NO_KEY = {"error": {"code": 403, "message": "Method doesn't allow unregistered callers (callers without established identity). Please use API Key or other form of API consumer identity to call this API.",
+                         "errors": [{"message": "Method doesn't allow unregistered callers (callers without established identity). Please use API Key or other form of API consumer identity to call this API.", "domain": "global", "reason": "forbidden"}],
+                         "status": "PERMISSION_DENIED"}}
