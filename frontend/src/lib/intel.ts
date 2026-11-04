@@ -83,6 +83,29 @@ export interface CompetitorDetail {
 }
 export interface EditorialOpportunity { id: string; title: string; note: string; video_id: string | null; video_title: string | null; source_url: string | null; status: string; recommendation_id: string | null; created_at: string }
 
+export interface IdeaSource { kind: string; label: string; url: string | null; fictional: boolean; verified?: boolean }
+export interface Idea {
+  id: string; channel_id: string; subject: string; justification: string; sources: IdeaSource[]; titles: string[]; thumbnail_idea: string; hook: string; format: string;
+  duration_seconds: number; target_audience: string; editorial_priority: string; difficulty: string | null; confidence: string | null; favorite: boolean; recommended_on: string;
+  data_basis: string; origin: string; status: string; scheduled_on: string | null; facts_to_verify: string[];
+}
+export interface IdeasPage { total: number; limit: number; offset: number; counts: Record<string, number>; estimate_note: string; items: Idea[] }
+export interface CoachStatus { name: string; model: string | null; is_ai: boolean; suggestions: string[]; note: string }
+export interface CoachSection { text: string; refs: string[] }
+export interface CoachContent {
+  text?: string; observations?: CoachSection[]; hypotheses?: CoachSection[]; recommendations?: CoachSection[]; limitations?: string[];
+  sources?: Record<string, { label: string; url: string | null }>; fictional?: boolean;
+}
+export interface CoachMessage {
+  id: string; role: "user" | "assistant"; content: CoachContent; provider: string | null; model: string | null; is_ai: boolean; input_tokens: number | null; output_tokens: number | null;
+  cost_usd: number | null; created_at: string; tools: { tool: string; args: Record<string, string>; ok: boolean; summary: string }[];
+}
+export interface CoachList {
+  total: number; limit: number; offset: number; usage: { cost_usd: number; input_tokens: number; output_tokens: number };
+  items: { id: string; title: string; updated_at: string; messages: number; cost_usd: number }[];
+}
+export interface CoachConversation { conversation: { id: string; title: string; created_at: string; updated_at: string }; messages: CoachMessage[] }
+
 export async function intelGet<T>(path: string, params?: Record<string, string | undefined>): Promise<T> {
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(params ?? {})) if (value) query.set(key, value);

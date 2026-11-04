@@ -338,7 +338,7 @@ def test_opportunity_lifecycle_and_isolation(demo_db, studio, demo_cfg):
     with pytest.raises(store.StudioError):
         competitors.discard_opportunity(demo_db, "chn_demo_rotas", created["id"], utcnow())
     idea = competitors.opportunity_to_idea(demo_db, studio, "chn_demo_cronicas", created["id"], "long", utcnow())
-    assert idea["subject"] == "O lado comercial de Roma" and idea["origin"] == "dono"
+    assert idea["subject"] == "O lado comercial de Roma" and idea["origin"] == "dono" and len(idea["titles"]) == 3
     with pytest.raises(store.StudioError) as error:
         competitors.opportunity_to_idea(demo_db, studio, "chn_demo_cronicas", created["id"], "long", utcnow())
     assert error.value.code == "opportunity_closed"

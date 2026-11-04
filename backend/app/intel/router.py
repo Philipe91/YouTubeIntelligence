@@ -14,7 +14,7 @@ from ..deps import settings_dep
 from ..policy import policy_state
 from ..studio.router import studio_conn
 from ..studio.store import get_channel, list_channels
-from . import competitors, explorer, keywords, research
+from . import coach, competitors, explorer, ideas, keywords, research
 from .common import ClientFactory, compatible, default_client
 
 router = APIRouter(prefix="/api/intel")
@@ -296,3 +296,91 @@ class ToIdeaBody(BaseModel):
 @router.post("/channels/{channel_id}/opportunities/{opportunity_id}/idea", status_code=201)
 def opportunity_idea(channel_id: str, opportunity_id: str, body: ToIdeaBody, conn=Depends(research_db), studio=Depends(studio_conn)):
     return competitors.opportunity_to_idea(conn, studio, channel_id, opportunity_id, body.format, utcnow())
+
+
+# --- Ideias diárias -------------------------------------------------------------------------------
+
+@router.get("/channels/{channel_id}/ideas")
+def ideas_list(channel_id: str, filtro: str = "novas", limit: int = Query(default=20, ge=1, le=50), offset: int = PageOffset, studio=Depends(studio_conn)):
+    return ideas.list_ideas(studio, channel_id, filter_name=filtro, limit=limit, offset=offset)
+
+
+@router.post("/channels/{channel_id}/ideas/generate")
+def ideas_generate(channel_id: str, conn=Depends(research_db), studio=Depends(studio_conn), settings=Depends(settings_dep)):
+    return ideas.generate(conn, studio, settings, channel_id, utcnow())
+
+
+class IdeaAction(BaseModel):
+    action: str
+
+
+@router.post("/channels/{channel_id}/ideas/{idea_id}/act")
+def ideas_act(channel_id: str, idea_id: str, body: IdeaAction, studio=Depends(studio_conn)):
+    return ideas.act(studio, channel_id, idea_id, body.action)
+
+
+class IdeaFavorite(BaseModel):
+    favorite: bool
+
+
+@router.post("/channels/{channel_id}/ideas/{idea_id}/favorite")
+def ideas_favorite(channel_id: str, idea_id: str, body: IdeaFavorite, studio=Depends(studio_conn)):
+    return ideas.set_favorite(studio, channel_id, idea_id, body.favorite, utcnow())
+
+
+class IdeaSchedule(BaseModel):
+    scheduled_on: str
+
+
+@router.post("/channels/{channel_id}/ideas/{idea_id}/schedule")
+def ideas_schedule(channel_id: str, idea_id: str, body: IdeaSchedule, studio=Depends(studio_conn)):
+    return ideas.schedule(studio, channel_id, idea_id, body.scheduled_on, utcnow().date())
+
+
+# --- AI Coach -------------------------------------------------------------------------------------
+
+@router.get("/coach/status")
+def coach_status(settings=Depends(settings_dep)):
+    return coach.provider_status(settings)
+
+
+@router.get("/channels/{channel_id}/coach")
+def coach_list(channel_id: str, limit: int = PageLimit, offset: int = PageOffset, conn=Depends(research_db), studio=Depends(studio_conn)):
+    get_channel(studio, channel_id)
+    return coach.list_conversations(conn, channel_id, limit, offset)
+
+
+@router.get("/channels/{channel_id}/coach/{conversation_id}")
+def coach_get(channel_id: str, conversation_id: str, conn=Depends(research_db)):
+    return coach.get_conversation(conn, channel_id, conversation_id)
+
+
+class CoachBody(BaseModel):
+    question: str
+    conversation_id: str | None = None
+
+
+def coach_provider():
+    """Testes trocam por um provedor falso."""
+    return None
+
+
+@router.post("/channels/{channel_id}/coach", status_code=201)
+def coach_ask(channel_id: str, body: CoachBody, conn=Depends(research_db), studio=Depends(studio_conn), settings=Depends(settings_dep), provider=Depends(coach_provider)):
+    return coach.ask(conn, studio, settings, channel_id, body.question, body.conversation_id, utcnow(), provider)
+
+
+class RenameBody(BaseModel):
+    title: str
+
+
+@router.post("/channels/{channel_id}/coach/{conversation_id}/rename")
+def coach_rename(channel_id: str, conversation_id: str, body: RenameBody, conn=Depends(research_db)):
+    coach.rename_conversation(conn, channel_id, conversation_id, body.title, utcnow())
+    return {"renamed": conversation_id}
+
+
+@router.post("/channels/{channel_id}/coach/{conversation_id}/delete")
+def coach_delete(channel_id: str, conversation_id: str, conn=Depends(research_db)):
+    coach.delete_conversation(conn, channel_id, conversation_id)
+    return {"deleted": conversation_id}

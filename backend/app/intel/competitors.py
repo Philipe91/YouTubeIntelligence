@@ -294,6 +294,8 @@ def opportunity_to_idea(conn: sqlite3.Connection, studio: sqlite3.Connection, ch
     if row["status"] != "aberta":
         raise StudioError("opportunity_closed", "Esta oportunidade já foi tratada.", 409)
     idea = recommend.create_owner_recommendation(studio, channel_id, subject=row["title"], justification=row["note"] or "Oportunidade registrada por você ao estudar referências.", video_format=video_format)
+    # Toda ideia nasce com as três opções de título.
+    idea = recommend.generate_titles(studio, channel_id, idea["id"])
     conn.execute("UPDATE editorial_opportunities SET status = 'virou_ideia', recommendation_id = ?, updated_at = ? WHERE id = ?", (idea["id"], to_iso(now), opportunity_id))
     conn.commit()
     return idea

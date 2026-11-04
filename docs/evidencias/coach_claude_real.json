@@ -1,0 +1,187 @@
+{
+ "aviso": "Chamada real ao comando claude, com dados fictícios de demonstração. Sem ferramentas nem MCP no modelo: as ferramentas são internas do aplicativo.",
+ "pergunta": "Qual assunto devo produzir para este canal? Considere \"vikings\".",
+ "provedor": "claude_cli",
+ "modelo": "claude-sonnet-5-5",
+ "tokens_entrada": 4,
+ "tokens_saida": 1788,
+ "custo_informado_usd": 0.037932,
+ "ferramentas": [
+  {
+   "tool": "perfil_canal",
+   "ok": true,
+   "summary": "Perfil editorial lido.",
+   "at": "2026-11-04T02:57:38Z",
+   "args": {}
+  },
+  {
+   "tool": "analisar_termo",
+   "ok": true,
+   "summary": "Termo analisado: 20 vídeos coletados.",
+   "at": "2026-11-04T02:57:38Z",
+   "args": {
+    "term": "vikings"
+   }
+  },
+  {
+   "tool": "historico_videos",
+   "ok": true,
+   "summary": "3 vídeos no histórico.",
+   "at": "2026-11-04T02:57:38Z",
+   "args": {}
+  },
+  {
+   "tool": "termos_descoberta",
+   "ok": true,
+   "summary": "4 termos de descoberta.",
+   "at": "2026-11-04T02:57:38Z",
+   "args": {}
+  }
+ ],
+ "resposta": {
+  "observations": [
+   {
+    "text": "\"vikings\" já faz parte das palavras do perfil do canal, que mira episódios pouco conhecidos da história, com humor seco e animação simples, para adultos de 25 a 45 anos que assistem no celular.",
+    "refs": [
+     "perfil"
+    ]
+   },
+   {
+    "text": "O vídeo com mais views no histórico é \"Vikings não usavam chifres\", com 92000 views. O histórico tem só 3 vídeos, 2 deles com views informadas.",
+    "refs": [
+     "historico"
+    ]
+   },
+   {
+    "text": "Sua anotação nesse vídeo diz: \"Comentários pediram parte 2\".",
+    "refs": [
+     "historico"
+    ]
+   },
+   {
+    "text": "Na descoberta, a busca \"vikings não usavam chifres\" trouxe 2100 views no período. É a segunda maior entre os 4 termos, atrás de \"história de roma animada\" (4200 views).",
+    "refs": [
+     "descoberta"
+    ]
+   },
+   {
+    "text": "Foram coletados 20 vídeos com \"vikings\" no título, e essa não é a busca completa do YouTube. O índice experimental, relativo e calculado pelo aplicativo, é 56/100 em short (10 vídeos) e 60/100 em long (10 vídeos).",
+    "refs": [
+     "termo:vikings"
+    ]
+   },
+   {
+    "text": "Entre as referências coletadas estão \"vikings em 5 minutos\" e \"O dia em que vikings surpreendeu o mundo\", ambos de Atlas Animado (fictício). Isso indica que há formatos de título já usados no tema.",
+    "refs": [
+     "video:DEMO_V01l017",
+     "video:DEMO_V01l009",
+     "video:DEMO_V01l010"
+    ]
+   },
+   {
+    "text": "Roma também aparece na descoberta: \"história de roma animada\" (4200 views) e \"como era viver em roma\" (980 views). \"peste negra explicada\" teve 1600 views.",
+    "refs": [
+     "descoberta"
+    ]
+   }
+  ],
+  "hypotheses": [
+   {
+    "text": "Vikings parece combinar com o canal e com a audiência atual. Isso vem do perfil, do vídeo mais visto e de uma busca própria com 2100 views. Não dá para afirmar causa, porque a amostra é pequena.",
+    "refs": [
+     "historico",
+     "descoberta",
+     "perfil"
+    ]
+   },
+   {
+    "text": "A demanda por uma parte 2 nos comentários pode indicar interesse em continuar o tema. Talvez o ângulo \"mito desmentido\" seja o que atraiu o público, e não vikings em geral.",
+    "refs": [
+     "historico"
+    ]
+   },
+   {
+    "text": "Roma tem mais views em busca do que vikings. Pode ser um segundo eixo de conteúdo, mas não há dados para compará-lo com vikings em potencial.",
+    "refs": [
+     "descoberta"
+    ]
+   }
+  ],
+  "recommendations": [
+   {
+    "text": "Produza a \"parte 2\" de \"Vikings não usavam chifres\" como vídeo principal. Escolha um mito ou episódio viking pouco conhecido e conte com o humor seco do canal. Isso responde a um pedido real da audiência e se encaixa no posicionamento.",
+    "refs": [
+     "historico",
+     "perfil"
+    ]
+   },
+   {
+    "text": "Use um título que ligue ao termo já buscado (\"vikings não usavam chifres\"), mas com um ângulo novo. Veja os títulos coletados só para entender o que já existe e diferenciar o seu. Não copie roteiro, título nem thumbnail.",
+    "refs": [
+     "descoberta",
+     "termo:vikings",
+     "video:DEMO_V01l017",
+     "video:DEMO_V01l010",
+     "video:DEMO_V01l009"
+    ]
+   },
+   {
+    "text": "Leia os comentários do vídeo original para ver o que pediram na parte 2 e use isso para escolher o tema.",
+    "refs": [
+     "historico"
+    ]
+   },
+   {
+    "text": "Alterne com um vídeo de Roma ou peste, que também têm busca no canal. Assim você testa se o resultado vem do tema vikings ou do formato.",
+    "refs": [
+     "descoberta",
+     "perfil"
+    ]
+   },
+   {
+    "text": "Se quiser testar formato, o índice experimental é parecido em short (56) e long (60). Dá para fazer um short de teste, sem tratar o índice como previsão.",
+    "refs": [
+     "termo:vikings"
+    ]
+   }
+  ],
+  "limitations": [
+   "Volume de busca indisponível: nenhuma API pública do YouTube informa esse número.",
+   "A coleta de 20 vídeos não é a busca completa do YouTube.",
+   "O índice experimental é relativo e calculado pelo aplicativo. Não é previsão de desempenho.",
+   "O histórico tem só 3 vídeos, e só 2 têm views. Isso não permite concluir causa.",
+   "Faltam dados de retenção, CTR e conteúdo dos comentários para decidir o ângulo da parte 2."
+  ],
+  "sources": {
+   "perfil": {
+    "label": "Perfil editorial do canal",
+    "url": "/canais/chn_demo_cronicas?aba=configuracoes"
+   },
+   "termo:vikings": {
+    "label": "Termo: vikings",
+    "url": "/palavras?termo=vikings&canal=chn_demo_cronicas"
+   },
+   "video:DEMO_V01l017": {
+    "label": "Vídeo: vikings em 5 minutos",
+    "url": "/videos/DEMO_V01l017"
+   },
+   "video:DEMO_V01l010": {
+    "label": "Vídeo: O dia em que vikings surpreendeu o mundo",
+    "url": "/videos/DEMO_V01l010"
+   },
+   "video:DEMO_V01l009": {
+    "label": "Vídeo: vikings em 5 minutos",
+    "url": "/videos/DEMO_V01l009"
+   },
+   "historico": {
+    "label": "Histórico de vídeos do canal",
+    "url": "/canais/chn_demo_cronicas?aba=historico"
+   },
+   "descoberta": {
+    "label": "Termos de descoberta",
+    "url": "/palavras?aba=descoberta&canal=chn_demo_cronicas"
+   }
+  },
+  "fictional": true
+ }
+}

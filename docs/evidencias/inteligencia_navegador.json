@@ -69,8 +69,26 @@
    "passo": "página do vídeo: guardar para estudo"
   },
   {
+   "passo": "ideias: todos os campos pedidos, sem previsão de views"
+  },
+  {
+   "passo": "ideias: favoritar e pôr no calendário cria item real"
+  },
+  {
+   "passo": "ideias: salvar, rejeitar e restaurar"
+  },
+  {
+   "passo": "coach: resposta separada, com fontes, ferramentas e custo"
+  },
+  {
+   "passo": "coach: histórico por canal"
+  },
+  {
+   "passo": "coach: renomear e apagar conversa"
+  },
+  {
    "passo": "celular sem estouro horizontal",
-   "rotas": 11
+   "rotas": 13
   },
   {
    "passo": "restrito: sem chave, erro explicado na tela"
@@ -86,6 +104,12 @@
   },
   {
    "passo": "restrito: concorrente com dados crus e sem padrões; falha de chave explicada"
+  },
+  {
+   "passo": "restrito: ideias só editoriais"
+  },
+  {
+   "passo": "restrito: coach responde e explica o que está bloqueado"
   }
  ],
  "cenarios": {},

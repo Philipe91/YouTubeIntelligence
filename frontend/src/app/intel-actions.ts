@@ -125,3 +125,48 @@ export async function opportunityToIdea(previous: ActionState, data: FormData): 
   const channel = text(data, "channel_id");
   return done(previous, await intelWrite(`/channels/${seg(channel)}/opportunities/${seg(text(data, "opportunity_id"))}/idea`, { format: text(data, "format") }), `/canais/${channel}/concorrentes`, `/canais/${channel}`);
 }
+
+// --- Ideias diárias ----------------------------------------------------------------------------
+
+export async function generateIdeas(previous: ActionState, data: FormData): Promise<ActionState> {
+  const channel = text(data, "channel_id");
+  return done(previous, await intelWrite(`/channels/${seg(channel)}/ideas/generate`), "/ideias", `/canais/${channel}`);
+}
+
+export async function ideaAct(previous: ActionState, data: FormData): Promise<ActionState> {
+  const channel = text(data, "channel_id");
+  return done(previous, await intelWrite(`/channels/${seg(channel)}/ideas/${seg(text(data, "idea_id"))}/act`, { action: text(data, "action") }), "/ideias", `/canais/${channel}`);
+}
+
+export async function ideaFavorite(previous: ActionState, data: FormData): Promise<ActionState> {
+  const channel = text(data, "channel_id");
+  return done(previous, await intelWrite(`/channels/${seg(channel)}/ideas/${seg(text(data, "idea_id"))}/favorite`, { favorite: text(data, "favorite") === "1" }), "/ideias");
+}
+
+export async function ideaSchedule(previous: ActionState, data: FormData): Promise<ActionState> {
+  const channel = text(data, "channel_id");
+  return done(previous, await intelWrite(`/channels/${seg(channel)}/ideas/${seg(text(data, "idea_id"))}/schedule`, { scheduled_on: text(data, "scheduled_on") }), "/ideias", `/canais/${channel}`);
+}
+
+// --- Coach -------------------------------------------------------------------------------------
+
+export async function askCoach(previous: ActionState, data: FormData): Promise<ActionState> {
+  const channel = text(data, "channel_id");
+  const conversation = text(data, "conversation_id");
+  const result = await intelWrite(`/channels/${seg(channel)}/coach`, { question: text(data, "question"), conversation_id: conversation || null });
+  if (!result.ok) return { error: result.error, done: previous.done };
+  revalidatePath("/coach");
+  redirect(`/coach?canal=${seg(channel)}&conversa=${seg(String(result.data.conversation_id))}`);
+}
+
+export async function renameConversation(previous: ActionState, data: FormData): Promise<ActionState> {
+  return done(previous, await intelWrite(`/channels/${seg(text(data, "channel_id"))}/coach/${seg(text(data, "conversation_id"))}/rename`, { title: text(data, "title") }), "/coach");
+}
+
+export async function deleteConversation(previous: ActionState, data: FormData): Promise<ActionState> {
+  const channel = text(data, "channel_id");
+  const result = await intelWrite(`/channels/${seg(channel)}/coach/${seg(text(data, "conversation_id"))}/delete`);
+  if (!result.ok) return { error: result.error, done: previous.done };
+  revalidatePath("/coach");
+  redirect(`/coach?canal=${seg(channel)}`);
+}

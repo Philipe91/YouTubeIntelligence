@@ -284,7 +284,7 @@ def demo_competitors(page: Page, saida: Path) -> None:
     with page.expect_download() as baixado:
         page.get_by_role("link", name="Baixar relatório com fontes").click()
     texto = Path(baixado.value.path()).read_text(encoding="utf-8")
-    assert "Dados fictícios" in texto and "Atlas Animado" in texto and "A rota comercial" not in texto.split("Oportunidades")[-1] or True
+    assert "Dados fictícios" in texto and "Atlas Animado" in texto and "Era em Traços" in texto
     passo("concorrentes: relatório baixado", bytes=len(texto))
 
     page.goto(f"{WEB}/canais/{OUTRO}/concorrentes")
@@ -302,6 +302,79 @@ def demo_competitors(page: Page, saida: Path) -> None:
     passo("página do vídeo: guardar para estudo")
 
 
+def demo_ideas_coach(page: Page, saida: Path) -> None:
+    page.goto(f"{WEB}/ideias?canal={OUTRO}")
+    page.get_by_role("button", name="Gerar ideias").click()
+    expect(page.get_by_text("Ideia para vídeo").first).to_be_visible()
+    page.goto(f"{WEB}/ideias?canal={CANAL}")
+    page.get_by_role("button", name="Gerar ideias").click()
+    cartao = page.locator("article").first
+    expect(cartao.get_by_text("Títulos")).to_be_visible()
+    for campo in ("Justificativa", "Referências", "Conceito de thumbnail", "Hook inicial", "Formato", "Público", "Dificuldade estimada", "Confiança na evidência", "Recomendada em"):
+        expect(cartao.get_by_text(campo, exact=True).first).to_be_visible()
+    assert cartao.locator("ol li").count() == 3
+    assert "previsão" not in page.locator("main").inner_text().lower().replace("não há previsão de views", "")
+    tela(page, saida, "30_ideias.png")
+    passo("ideias: todos os campos pedidos, sem previsão de views")
+
+    assunto = cartao.locator("h2").inner_text()
+    cartao.get_by_role("button", name="Favoritar").click()
+    expect(page.locator("article").filter(has_text=assunto).get_by_text("Favorita", exact=True)).to_be_visible()
+    alvo = page.locator("article").filter(has_text=assunto)
+    alvo.get_by_label("Data no calendário").fill("2031-03-14")
+    alvo.get_by_role("button", name="Pôr no calendário").click()
+    expect(page.locator("article").filter(has_text=assunto)).to_have_count(0)
+    calendario = page.request.get(f"http://127.0.0.1:{API_PORT}/api/studio/calendar", params={"start": "2031-03-01", "end": "2031-03-31", "channel_id": CANAL}).json()["entries"]
+    assert len(calendario) == 1 and calendario[0]["recommendation_id"]
+    passo("ideias: favoritar e pôr no calendário cria item real")
+
+    page.goto(f"{WEB}/ideias?canal={CANAL}&filtro=salvas")
+    expect(page.locator("article").filter(has_text=assunto).get_by_text("Calendário: 14/03/2031")).to_be_visible()
+    page.goto(f"{WEB}/ideias?canal={CANAL}&filtro=novas")
+    outra = page.locator("article").first
+    assunto_outra = outra.locator("h2").inner_text()
+    outra.get_by_role("button", name="Rejeitar").click()
+    expect(page.locator("article").filter(has_text=assunto_outra)).to_have_count(0)
+    page.goto(f"{WEB}/ideias?canal={CANAL}&filtro=rejeitadas")
+    expect(page.locator("article").filter(has_text=assunto_outra)).to_be_visible()
+    page.locator("article").filter(has_text=assunto_outra).get_by_role("button", name="Restaurar").click()
+    expect(page.locator("article").filter(has_text=assunto_outra)).to_have_count(0)
+    page.goto(f"{WEB}/ideias?canal={CANAL}&filtro=novas")
+    page.locator("article").first.get_by_role("button", name="Salvar").click()
+    passo("ideias: salvar, rejeitar e restaurar")
+
+    page.goto(f"{WEB}/coach?canal={CANAL}")
+    expect(page.get_by_text("Responde por regras, sem IA e sem custo.")).to_be_visible()
+    page.get_by_role("button", name="Qual assunto devo produzir para este canal?").click()
+    page.wait_for_url(re.compile(r"conversa=cnv_"))
+    expect(page.get_by_role("heading", name="Observações").first).to_be_visible()
+    expect(page.get_by_role("heading", name="Recomendações").first).to_be_visible()
+    expect(page.get_by_role("heading", name="Fontes").first).to_be_visible()
+    page.get_by_text("Ferramentas usadas").first.click()
+    expect(page.get_by_text("ideias", exact=True).first).to_be_visible()
+    expect(page.get_by_text("Sem custo de IA").first).to_be_visible()
+    tela(page, saida, "31_coach.png")
+    passo("coach: resposta separada, com fontes, ferramentas e custo")
+
+    page.get_by_label("Sua pergunta").fill("Quais concorrentes merecem acompanhamento?")
+    page.get_by_role("button", name="Perguntar").click()
+    expect(page.get_by_text("Atlas Animado (fictício) tem", exact=False).first).to_be_visible()
+    page.goto(f"{WEB}/coach?canal={OUTRO}")
+    expect(page.get_by_text("Nenhuma conversa neste canal.")).to_be_visible()
+    page.goto(f"{WEB}/coach?canal={CANAL}")
+    expect(page.get_by_role("link", name="Qual assunto devo produzir", exact=False)).to_be_visible()
+    passo("coach: histórico por canal")
+
+    page.get_by_role("link", name="Qual assunto devo produzir", exact=False).click()
+    page.get_by_label("Título da conversa").fill("Próximos assuntos")
+    page.get_by_role("button", name="Renomear").click()
+    expect(page.get_by_role("link", name="Próximos assuntos")).to_be_visible()
+    page.get_by_role("button", name="Apagar conversa").click()
+    page.wait_for_url(re.compile(r"/coach\?canal="))
+    expect(page.get_by_role("link", name="Próximos assuntos")).to_have_count(0)
+    passo("coach: renomear e apagar conversa")
+
+
 def cenario_demo(browser, dados: Path, saida: Path) -> None:
     with App(dados, "demo"):
         context = browser.new_context(viewport={"width": 1366, "height": 900}, accept_downloads=True)
@@ -310,10 +383,12 @@ def cenario_demo(browser, dados: Path, saida: Path) -> None:
         demo_keywords(page, saida)
         demo_explorer(page, saida)
         demo_competitors(page, saida)
+        demo_ideas_coach(page, saida)
         competidor = page.request.get(f"http://127.0.0.1:{API_PORT}/api/intel/channels/{CANAL}/competitors").json()["items"][0]["id"]
         context.close()
         rotas_moveis(browser, ["/", "/pesquisa", f"/pesquisa/{run}", "/pesquisa?aba=historico", "/palavras", "/palavras?termo=roma", f"/palavras?aba=para-voce&canal={CANAL}",
-                               f"/explorer?canal={CANAL}", f"/explorer?aba=estudo&canal={CANAL}", f"/canais/{CANAL}/concorrentes", f"/canais/{CANAL}/concorrentes/{competidor}"])
+                               f"/explorer?canal={CANAL}", f"/explorer?aba=estudo&canal={CANAL}", f"/canais/{CANAL}/concorrentes", f"/canais/{CANAL}/concorrentes/{competidor}",
+                               f"/ideias?canal={CANAL}", f"/coach?canal={CANAL}"])
 
 
 # --- Cenário restrito -----------------------------------------------------------------------------
@@ -404,6 +479,20 @@ def cenario_restrito(browser, dados: Path, saida: Path) -> None:
         expect(page.get_by_role("alert").filter(has_text="YOUTUBE_API_KEY")).to_be_visible()
         tela(page, saida, "29_restrito_concorrente.png")
         passo("restrito: concorrente com dados crus e sem padrões; falha de chave explicada")
+
+        page.goto(f"{WEB}/ideias?canal={canal}")
+        page.get_by_role("button", name="Gerar ideias").click()
+        expect(page.get_by_text("Editorial, sem métricas").first).to_be_visible()
+        assert page.get_by_text("Métrica própria").count() == 0
+        tela(page, saida, "32_restrito_ideias.png")
+        passo("restrito: ideias só editoriais")
+
+        page.goto(f"{WEB}/coach?canal={canal}")
+        page.get_by_role("button", name="Que oportunidades existem para canais em português e inglês?").click()
+        page.wait_for_url(re.compile(r"conversa=cnv_"))
+        expect(page.get_by_text("Bloqueado: a política da API", exact=False).first).to_be_visible()
+        tela(page, saida, "33_restrito_coach.png")
+        passo("restrito: coach responde e explica o que está bloqueado")
         context.close()
 
 

@@ -11,6 +11,8 @@ const GROUPS = [
       { href: "/pesquisa", label: "Central de pesquisa" },
       { href: "/palavras", label: "Palavras-chave" },
       { href: "/explorer", label: "Outlier Explorer" },
+      { href: "/ideias", label: "Ideias diárias" },
+      { href: "/coach", label: "Coach" },
       { href: "/oportunidades", label: "Oportunidades" },
       { href: "/videos", label: "Vídeos" },
       { href: "/tendencias", label: "Tendências" },
