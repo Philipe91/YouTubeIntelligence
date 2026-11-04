@@ -14,9 +14,10 @@ from ..db import connect, migrate, utcnow
 from ..deps import settings_dep
 from ..metrics.text import normalize
 from ..policy import policy_state
+from ..scheduler import ensure_jobs
 from ..studio.router import studio_conn
 from ..studio.store import StudioError, get_channel, list_channels
-from . import coach, competitors, explorer, ideas, keywords, lab, research
+from . import coach, competitors, explorer, feed, ideas, keywords, lab, research
 from .common import ClientFactory, compatible, default_client
 
 router = APIRouter(prefix="/api/intel")
@@ -465,3 +466,11 @@ async def lab_image(channel_id: str, variation_id: str, request: Request, studio
 @router.get("/channels/{channel_id}/lab/images/{file_name}")
 def lab_image_file(channel_id: str, file_name: str, studio=Depends(studio_conn), settings=Depends(settings_dep)):
     return FileResponse(lab.image_path(studio, settings, channel_id, file_name), media_type="image/jpeg", headers={"X-Content-Type-Options": "nosniff"})
+
+
+# --- Smart Dashboard ------------------------------------------------------------------------------
+
+@router.get("/feed")
+def smart_feed(channel_id: str | None = None, format: str = Query(default="long", pattern="^(short|long)$"), conn=Depends(research_db), studio=Depends(studio_conn), settings=Depends(settings_dep)):
+    ensure_jobs(conn)
+    return feed.build(conn, studio, settings, channel_id, format)

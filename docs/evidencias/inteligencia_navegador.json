@@ -103,6 +103,19 @@
    "passo": "lab: isolamento entre canais e apagar variação"
   },
   {
+   "passo": "feed: todos os blocos pedidos"
+  },
+  {
+   "passo": "feed: todo link leva a uma página real",
+   "links": 58
+  },
+  {
+   "passo": "feed: filtro por canal, ação de gerar e atalho para o Coach"
+  },
+  {
+   "passo": "feed: canal inexistente não derruba a página"
+  },
+  {
    "passo": "celular sem estouro horizontal",
    "rotas": 14
   },
@@ -126,6 +139,9 @@
   },
   {
    "passo": "restrito: coach responde e explica o que está bloqueado"
+  },
+  {
+   "passo": "restrito: feed com dados crus, limites e sem score"
   }
  ],
  "cenarios": {},

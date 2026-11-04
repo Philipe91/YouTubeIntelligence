@@ -20,6 +20,7 @@ O REA 6.4 é uma ferramenta de engenharia reversa: analisa binários, apps e pá
 | Listar canais | `list_channels` | Não |
 | Consultar o canal selecionado | `get_channel_context` | Registra contato |
 | Ler recomendações | `get_recommendations` | Registra contato |
+| Ler a inteligência do canal | `get_channel_intelligence` | Não |
 | Registrar recomendação | `submit_recommendation` | Sim |
 | Briefing do próximo vídeo | `get_next_briefing` | Registra contato |
 | Ver tarefas disponíveis | `list_available_tasks` | Só recupera prazos vencidos |

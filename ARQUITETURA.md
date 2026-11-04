@@ -83,6 +83,24 @@ O registro é uma declaração sua de que o Google aprovou o uso. O app não con
 
 Contrato em `docs/CONTRATO_AGENTE.md`. Produção real em `docs/INTEGRACAO_BROTHER_QUILL.md`.
 
+## 3b. Inteligência
+
+`app/intel/` reúne os módulos de pesquisa. Reaproveita a trava de `policy.py`, o coletor, as métricas e a tabela de recomendações. Rotas em `/api/intel`, com o mesmo token nas escritas.
+
+| Módulo | Função |
+|---|---|
+| `common.py` | Origem dos dados, canal compatível com o modo, erros da API, CSV seguro |
+| `research.py` | Pesquisas, histórico, salvos, comparação e exportação |
+| `keywords.py` | Análise de termo, favoritas, termos de descoberta e sugestões por canal |
+| `explorer.py` | Busca na base, lista de estudo, comparação de títulos |
+| `competitors.py` | Lista por canal, vídeos, calendário, padrões, oportunidades e relatório |
+| `ideas.py` | Fontes das ideias, estimativas por regra e ações sobre recomendações |
+| `coach.py` | Ferramentas de leitura, provedores e validação das respostas |
+| `lab.py` | Avaliação de títulos e imagens, projetos e variações |
+| `feed.py` | Junta os módulos no feed e no resumo para o agente |
+
+Detalhes e limites em `docs/INTELIGENCIA.md`.
+
 ## 4. Banco de dados
 
 Migrações em `backend/migrations/`.
@@ -98,6 +116,12 @@ Migrações em `backend/migrations/`.
 | `api_calls`, `api_cache` | Registro de cota e cache de respostas |
 | `jobs` | Tarefas periódicas |
 | `ai_generations` | Saídas geradas, com provedor, modelo e evidências usadas |
+| `research_runs`, `research_items` | Pesquisas por canal e os IDs encontrados |
+| `keyword_lookups`, `own_search_terms` | Histórico de termos e buscas que levaram ao canal |
+| `study_videos`, `editorial_opportunities` | Lista de estudo e oportunidades por canal |
+| `coach_conversations`, `coach_messages`, `coach_tool_calls` | Conversas, custo e ferramentas usadas |
+
+No estúdio, `keyword_favorites`, `lab_projects` e `lab_variations` guardam o que é só seu.
 
 ## 5. Algoritmos
 

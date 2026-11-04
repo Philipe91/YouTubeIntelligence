@@ -1,6 +1,6 @@
 # YouTube Intelligence
 
-Central local para gerenciar seus canais dark e pesquisar nichos: cadastro de canais, recomendações por canal, calendário, fila de produção integrada ao Claude Code, além de pesquisa, concorrentes, desempenho relativo e tendências. Implementação independente, sem relação com o vidIQ ou o YouTube.
+Central local para pesquisar nichos e planejar seus canais dark: feed por canal, pesquisa, palavras-chave, vídeos fora da curva, concorrentes, ideias, um consultor por canal e laboratório de títulos e thumbnails, além de calendário e fila de produção integrada ao Claude Code. Implementação independente, sem relação com o vidIQ ou o YouTube.
 
 **Antes de usar dados reais, leia [Modo real](#modo-real):** a política da API do YouTube bloqueia scores e VPH sem auditoria e aprovação do Google.
 
@@ -39,11 +39,27 @@ Seus cadastros ficam em `data/studio.sqlite`, valem nos dois modos e não depend
 
 Na página de cada canal: visão geral, recomendações, fila, calendário, histórico, concorrentes e configurações, incluindo automação. O calendário é interno: nada é agendado no YouTube.
 
+## Inteligência
+
+| Tela | O que faz |
+|---|---|
+| **Hoje** (`/`) | Feed por canal: pendências, oportunidades, vídeos, tendências, títulos, ideias, coleta e limites |
+| **Central de pesquisa** | Vídeos, canais, recentes e canais pequenos, com histórico, salvos, comparação e CSV |
+| **Palavras-chave** | Análise do termo, relacionados, variações, perguntas, ascensão, favoritas e sugestões por canal |
+| **Outlier Explorer** | Vídeos por assunto, lista de estudo, notas e comparação de títulos |
+| **Ideias diárias** | Sugestões por canal, com salvar, rejeitar, favoritar e calendário |
+| **Coach** | Consultor por canal, com fontes, ferramentas usadas e custo. Por padrão, responde por regras, sem IA |
+| **Títulos e thumbnails** | Alternativas, análise de título e imagem, prévia e variações |
+
+Os concorrentes de cada canal ficam na página do canal, em **Concorrentes**.
+
+**Sem chave, tudo funciona com dados fictícios, sempre rotulados.** Com dados reais e sem aprovação do Google, as telas mostram dados crus e bloqueiam scores. O volume de busca aparece como indisponível, porque nenhuma API pública o informa. O modo real ainda não foi usado com a API de verdade. Veja `docs/INTELIGENCIA.md` e `docs/MATRIZ_VIDIQ.md`.
+
 ## Claude Code
 
 Abra o Claude Code nesta pasta e aprove o servidor `yti-producao` definido em `.mcp.json`. Depois, peça por exemplo: "use yti-producao para ler o briefing do canal X e propor três recomendações". O contrato completo está em `docs/CONTRATO_AGENTE.md`.
 
-O agente lê, propõe, pede produção e entrega arquivos. Autorizar é com você, no painel, e **não existe publicação**.
+O agente lê, inclusive a inteligência do canal com `get_channel_intelligence`, propõe, pede produção e entrega arquivos. Autorizar é com você, no painel, e **não existe publicação**.
 
 ### Produção real
 
@@ -66,7 +82,7 @@ npm run typecheck
 
 Os testes não acessam a rede: as APIs são simuladas.
 
-Veja `docs/TESTES.md`. Para o ciclo completo, com navegador, MCP real, queda e reinício, use uma pasta vazia fora de `data/` e o frontend já compilado:
+Veja `docs/TESTES.md`. Para os módulos de inteligência no navegador, use `scripts/teste_inteligencia.py`. Para o ciclo completo, com navegador, MCP real, queda e reinício, use uma pasta vazia fora de `data/` e o frontend já compilado:
 
 ```powershell
 uv run --directory backend --with playwright python ../scripts/teste_ciclo_completo.py --dados C:\temp\ciclo --saida ../docs/evidencias
@@ -157,6 +173,8 @@ claude mcp add --transport http vidiq https://mcp.vidiq.com/mcp
 ## Documentos
 
 - [Arquitetura](ARQUITETURA.md)
+- [Módulos de inteligência](docs/INTELIGENCIA.md)
+- [Matriz de equivalência com o vidIQ](docs/MATRIZ_VIDIQ.md)
 - [Plano](PLANO.md)
 - [Integração com o Brother Quill](docs/INTEGRACAO_BROTHER_QUILL.md)
 - [Testes](docs/TESTES.md)

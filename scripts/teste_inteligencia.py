@@ -441,6 +441,40 @@ def demo_lab(page: Page, saida: Path, dados: Path) -> None:
     passo("lab: isolamento entre canais e apagar variação")
 
 
+def demo_feed(page: Page, saida: Path) -> None:
+    page.goto(f"{WEB}/?f=long")
+    for titulo in ("Pendências editoriais", "Novas oportunidades", "Vídeos para investigar", "Alertas de tendências", "Recomendações de títulos", "Seus canais", "Ideias salvas", "Pesquisas recentes", "Disponibilidade de dados", "Status da coleta", "Limitações de conformidade"):
+        expect(page.get_by_role("heading", name=titulo, exact=True)).to_be_visible()
+    tela(page, saida, "35_feed.png")
+    passo("feed: todos os blocos pedidos")
+
+    quebrados = []
+    rotas = sorted({link for link in page.eval_on_selector_all("main a[href^='/']", "links => links.map(l => l.getAttribute('href'))")})
+    for rota in rotas:
+        resposta = page.request.get(f"{WEB}{rota}")
+        if resposta.status >= 400:
+            quebrados.append((rota, resposta.status))
+    assert not quebrados, f"links quebrados: {quebrados}"
+    passo("feed: todo link leva a uma página real", links=len(rotas))
+
+    page.goto(f"{WEB}/?canal={OUTRO}&f=long")
+    expect(page.get_by_role("heading", name="Hoje em Rotas Esquecidas (fictício)")).to_be_visible()
+    painel = page.get_by_role("heading", name="Pesquisas recentes").locator("xpath=ancestor::section[1]")
+    expect(painel.get_by_text("Nenhuma pesquisa ainda.")).to_be_visible()
+    novas_antes = page.request.get(f"http://127.0.0.1:{API_PORT}/api/intel/channels/{OUTRO}/ideas").json()["total"]
+    page.get_by_role("button", name="Gerar ideias").click()
+    page.wait_for_timeout(1500)
+    novas_depois = page.request.get(f"http://127.0.0.1:{API_PORT}/api/intel/channels/{OUTRO}/ideas").json()["total"]
+    assert novas_depois >= novas_antes
+    page.get_by_role("link", name="Perguntar ao Coach").click()
+    page.wait_for_url(re.compile(rf"/coach\?canal={OUTRO}"))
+    passo("feed: filtro por canal, ação de gerar e atalho para o Coach")
+
+    page.goto(f"{WEB}/?canal=nao_existe")
+    expect(page.get_by_role("heading", name="Hoje nos seus canais")).to_be_visible()
+    passo("feed: canal inexistente não derruba a página")
+
+
 def cenario_demo(browser, dados: Path, saida: Path) -> None:
     with App(dados, "demo"):
         context = browser.new_context(viewport={"width": 1366, "height": 900}, accept_downloads=True)
@@ -451,6 +485,7 @@ def cenario_demo(browser, dados: Path, saida: Path) -> None:
         demo_competitors(page, saida)
         demo_ideas_coach(page, saida)
         demo_lab(page, saida, dados)
+        demo_feed(page, saida)
         competidor = page.request.get(f"http://127.0.0.1:{API_PORT}/api/intel/channels/{CANAL}/competitors").json()["items"][0]["id"]
         context.close()
         rotas_moveis(browser, ["/", "/pesquisa", f"/pesquisa/{run}", "/pesquisa?aba=historico", "/palavras", "/palavras?termo=roma", f"/palavras?aba=para-voce&canal={CANAL}",
@@ -560,6 +595,16 @@ def cenario_restrito(browser, dados: Path, saida: Path) -> None:
         expect(page.get_by_text("Bloqueado: a política da API", exact=False).first).to_be_visible()
         tela(page, saida, "33_restrito_coach.png")
         passo("restrito: coach responde e explica o que está bloqueado")
+
+        page.goto(f"{WEB}/?canal={canal}&f=long")
+        expect(page.get_by_role("heading", name="Vídeos coletados mais recentes")).to_be_visible()
+        expect(page.get_by_text("Este cálculo está bloqueado").first).to_be_visible()
+        expect(page.get_by_text("IDR e bandas de outlier")).to_be_visible()
+        expect(page.get_by_text("falta chave")).to_be_visible()
+        expect(page.get_by_text("Precisa de YOUTUBE_API_KEY.").first).to_be_visible()
+        assert page.get_by_text(re.compile(r"\d+,\dx")).count() == 0
+        tela(page, saida, "36_restrito_feed.png")
+        passo("restrito: feed com dados crus, limites e sem score")
         context.close()
 
 

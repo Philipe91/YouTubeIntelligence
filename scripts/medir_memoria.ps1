@@ -40,6 +40,13 @@ try {
   "API depois da analise: $(Mb $api.Id) MB"
   foreach ($i in 1..5) { Invoke-RestMethod "http://127.0.0.1:$Port/api/overview?format=long" -TimeoutSec 120 | Out-Null }
   "API depois de 5 consultas: $(Mb $api.Id) MB"
+  $t = Measure-Command { Invoke-RestMethod "http://127.0.0.1:$Port/api/intel/feed?format=long" -TimeoutSec 120 | Out-Null }
+  "Feed inteligente: $([math]::Round($t.TotalSeconds, 2)) s"
+  foreach ($rota in 'explorer?format=long', 'keywords/analyze?term=roma', 'channels/chn_demo_cronicas/competitors', 'channels/chn_demo_cronicas/keywords/for-you') {
+    $t = Measure-Command { Invoke-RestMethod "http://127.0.0.1:$Port/api/intel/$rota" -TimeoutSec 120 | Out-Null }
+    "$rota : $([math]::Round($t.TotalSeconds, 2)) s"
+  }
+  "API depois dos modulos de inteligencia: $(Mb $api.Id) MB"
 } finally {
   foreach ($item in (TreeIds $api.Id)) { Stop-Process -Id $item -Force -Confirm:$false -ErrorAction SilentlyContinue }
 }

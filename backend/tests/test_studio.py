@@ -487,7 +487,7 @@ def test_package_requires_delivered_job_and_own_artifact(db, contract):
 def test_contract_has_no_publish_or_owner_operations_as_agent_tools():
     code = (BACKEND_DIR / "app" / "studio" / "mcp_server.py").read_text(encoding="utf-8")
     tools = [line.split("def ")[1].split("(")[0] for line, previous in zip(code.splitlines()[1:], code.splitlines()) if "@server.tool()" in previous]
-    assert len(tools) == 20
+    assert len(tools) == 21
     for forbidden in ("publish", "upload", "insert", "authorize", "cancel", "retry"):
         assert not [t for t in tools if forbidden in t and t != "prepare_publish_package"], forbidden
 

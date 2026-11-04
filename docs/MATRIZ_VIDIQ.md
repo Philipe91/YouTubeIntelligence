@@ -9,7 +9,7 @@ Cada recurso responde às dez perguntas pedidas:
 - **Nossa proposta**, **Limite de API** e **Google**: como fazemos e o que depende de autorização.
 - **Estado**: situação no YouTube Intelligence, atualizada a cada etapa.
 
-> **Atenção:** enquanto esta nota existir, "feito" significa planejado para a Fase 5. Ela sai quando os módulos forem validados.
+> **Como ler "feito":** implementado, com testes automáticos e validado no navegador com dados fictícios e com um YouTube falso. **Nenhum módulo falou com a API real do YouTube**, porque não há chave configurada. Limites em `docs/INTELIGENCIA.md`.
 
 ## Resumo
 
@@ -26,8 +26,8 @@ Cada recurso responde às dez perguntas pedidas:
 | Questions | Perguntas | Feito, por modelo e títulos crus | Não |
 | Top Search Terms | Termos do Analytics | Conector só com mock | OAuth do canal |
 | Competitor Tracking | Competitor Intelligence | Feito; comparação bloqueada em dados reais | Comparação sim |
-| Daily Ideas | Daily Ideas | Feito, sem previsão de views | Só a parte com métricas |
-| AI Coach | AI Coach | Feito; sem IA por padrão, Claude opcional | Não |
+| Daily Ideas | Ideias diárias | Feito sob demanda, sem previsão de views | Só a parte com métricas |
+| AI Coach | Coach | Feito; sem IA por padrão, Claude testado em 1 pergunta real | Não |
 | Channel Audit | Parcial em Analytics | Parcial | OAuth do canal |
 | Optimize Score | Title & Thumbnail Lab | Feito como heurística | Não |
 | Title Generator | Title Lab | Feito por regras | Não |
@@ -192,7 +192,7 @@ Cada recurso responde às dez perguntas pedidas:
 - **Nossa proposta:** ideias por canal, com todos os campos pedidos, sem previsão de views. Salvar, rejeitar, favoritar e pôr no calendário.
 - **Limite de API:** sem dados reais, a ideia é editorial.
 - **Google:** só a parte que usa métricas.
-- **Estado:** feito. O texto é por regras; Claude é opcional pelo Coach ou pelo contrato MCP.
+- **Estado:** feito, com geração sob demanda: não atualiza sozinho todo dia. O texto é por regras; Claude é opcional pelo Coach ou pelo contrato MCP.
 
 ## AI Coach
 

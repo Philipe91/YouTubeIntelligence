@@ -1,6 +1,6 @@
 # Pendências
 
-Situação em 03/11/2026. Para o primeiro canal real, veja `docs/PRIMEIRO_CANAL_REAL.md`.
+Situação em 04/11/2026. Para o primeiro canal real, veja `docs/PRIMEIRO_CANAL_REAL.md`.
 
 ## Depende de você
 
@@ -19,7 +19,10 @@ Passou em testes com mocks e nunca falou com o serviço verdadeiro:
 - YouTube Data API: formato das respostas, cota, `forHandle` e **o uso do tamanho do player para separar Shorts**.
 - Fluxo OAuth no navegador, incluindo o `keyring`. `run_browser_flow` não tem teste automatizado.
 - YouTube Analytics: a combinação `day,creatorContentType` pode ser recusada pelo Google.
-- `AnthropicProvider`: chamada real, incluindo `fallbacks`.
+- `AnthropicProvider` e `AnthropicCoach`: chamada real, incluindo `fallbacks`.
+- Busca de canais (`search_channels`), concorrentes e pesquisas no modo real: só com YouTube falso.
+- Termos de descoberta (`insightTrafficSourceDetail` com `YT_SEARCH`): só com mock.
+- Coach com `claude_cli`: uma pergunta real, sobre dados fictícios.
 
 ## Não implementado
 
@@ -34,11 +37,14 @@ Passou em testes com mocks e nunca falou com o serviço verdadeiro:
 | Editar o texto de título, hook e thumbnail | Só o título tem campo próprio, "Outro" |
 | Arrastar itens no calendário | Altere a data no formulário |
 | Importar histórico do YouTube | Histórico é digitado por você |
-| Vincular concorrente à coleta | Guarda só a referência |
 | Regra de 08/12/2025 para artistas oficiais | Não implementada |
 | Classificação de Short por vídeo via Analytics | Só há totais por tipo |
 | Alertas por e-mail | Só há painel |
-| Chat estilo AI Coach | Só há geração estruturada |
+| Provedor de volume de busca | Ponto de ligação pronto, sem provedor contratado |
+| Geração automática de ideias todo dia | Só sob demanda |
+| Auditoria de canal própria | Só Analytics e perguntas ao Coach |
+| OCR, rostos e geração de thumbnail | Fora desta fase |
+| Coach por resposta em fluxo e imagens anexadas | Sem suporte |
 | Comentários e transcrições | Sem conector |
 | Curva de retenção | Só a porcentagem média |
 | vidIQ MCP | Só interface desligada |
