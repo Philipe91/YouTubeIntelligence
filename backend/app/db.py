@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import sqlite3
+from collections.abc import Iterator
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -31,11 +32,27 @@ def connect(path: Path | str) -> sqlite3.Connection:
     return conn
 
 
+def _statements(script: str) -> Iterator[str]:
+    """Divide o arquivo em comandos. `complete_statement` ignora ponto e vírgula em comentários e textos."""
+    buffer = ""
+    # O que vem depois do último ponto e vírgula é só espaço ou comentário: não é comando.
+    for part in script.split(";")[:-1]:
+        buffer += part + ";"
+        if sqlite3.complete_statement(buffer):
+            yield buffer
+            buffer = ""
+
+
 def migrate(conn: sqlite3.Connection, migrations_dir: Path = MIGRATIONS_DIR) -> list[str]:
-    """Aplica em ordem as migrações pendentes e devolve as aplicadas."""
+    """Aplica em ordem as migrações pendentes e devolve as aplicadas.
+
+    Seguro com vários acessos ao mesmo tempo, inclusive de outro processo, como o servidor MCP: cada migração
+    trava a escrita, confere de novo se ainda falta e registra tudo na mesma transação.
+    """
     conn.execute(
         "CREATE TABLE IF NOT EXISTS schema_migrations (name TEXT PRIMARY KEY, applied_at TEXT NOT NULL)"
     )
+    conn.commit()
     applied = {row["name"] for row in conn.execute("SELECT name FROM schema_migrations")}
     newly_applied: list[str] = []
     for script in sorted(migrations_dir.glob("*.sql")):
@@ -46,10 +63,16 @@ def migrate(conn: sqlite3.Connection, migrations_dir: Path = MIGRATIONS_DIR) -> 
         conn.commit()
         conn.execute("PRAGMA foreign_keys = OFF")
         try:
-            conn.executescript("BEGIN;\n" + script.read_text(encoding="utf-8"))
+            conn.execute("BEGIN IMMEDIATE")
+            if conn.execute("SELECT 1 FROM schema_migrations WHERE name = ?", (script.name,)).fetchone():
+                conn.rollback()  # Outro acesso aplicou enquanto este esperava a trava.
+                continue
+            for statement in _statements(script.read_text(encoding="utf-8")):
+                conn.execute(statement)
             violations = conn.execute("PRAGMA foreign_key_check").fetchall()
             if violations:
                 raise sqlite3.IntegrityError(f"{script.name} violaria chaves estrangeiras em {len(violations)} linhas.")
+            conn.execute("INSERT INTO schema_migrations (name, applied_at) VALUES (?, ?)", (script.name, to_iso(utcnow())))
             conn.commit()
         except sqlite3.Error:
             if conn.in_transaction:
@@ -57,10 +80,5 @@ def migrate(conn: sqlite3.Connection, migrations_dir: Path = MIGRATIONS_DIR) -> 
             raise
         finally:
             conn.execute("PRAGMA foreign_keys = ON")
-        conn.execute(
-            "INSERT INTO schema_migrations (name, applied_at) VALUES (?, ?)",
-            (script.name, to_iso(utcnow())),
-        )
-        conn.commit()
         newly_applied.append(script.name)
     return newly_applied
