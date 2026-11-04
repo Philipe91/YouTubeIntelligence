@@ -92,7 +92,7 @@ export function ProductionPanel({ channelId, job, production, briefing, artifact
           {validation && (
             <p className={`mt-2 text-sm ${validation.ok ? "text-ink-2" : "text-bad"}`}>
               {validation.ok
-                ? `Arquivo conferido: ${validation.width}x${validation.height}, ${validation.duration_seconds} s, ${validation.video_codec} e ${validation.audio_codec}, ${(validation.size_bytes / 1048576).toFixed(1)} MB. Por ${validation.validated_by}, ${dateTime(validation.validated_at)}.`
+                ? `Arquivo conferido: ${validation.width}x${validation.height}, ${validation.duration_seconds} s, ${validation.video_codec} e ${validation.audio_codec}, ${(validation.size_bytes / 1000000).toFixed(1)} MB. Por ${validation.validated_by}, ${dateTime(validation.validated_at)}.`
                 : validation.problems.join(" ")}
             </p>
           )}

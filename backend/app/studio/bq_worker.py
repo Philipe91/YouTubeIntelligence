@@ -153,7 +153,7 @@ class BQWorker:
         ended = stamp if status in {"concluida", "falhou"} else None
         self.conn.execute(
             """UPDATE job_stages SET status = ?, detail = ?, done = COALESCE(?, done), total = COALESCE(?, total),
-               started_at = COALESCE(?, started_at), ended_at = ? WHERE job_id = ? AND stage = ?""",
+               started_at = COALESCE(started_at, ?), ended_at = ? WHERE job_id = ? AND stage = ?""",
             (status, redact(detail)[:500], done, total, started, ended, self.job_id, stage),
         )
         self.conn.commit()

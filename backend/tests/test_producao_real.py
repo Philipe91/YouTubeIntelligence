@@ -349,6 +349,15 @@ def test_mix_keeps_music_under_voice_and_never_cuts_video(db, settings, contract
     assert "-shortest" not in next(c for c in executor.calls if c[0] == "mux")[1]
 
 
+def test_progress_updates_keep_the_stage_start_time(db, settings, contract):
+    channel, job, token, worker, executor = run_worker(db, settings, contract)
+    worker._stage("frames", "em_andamento")
+    db.execute("UPDATE job_stages SET started_at = '2026-01-01T00:00:00Z' WHERE job_id = ? AND stage = 'frames'", (job["id"],))
+    worker._stage("frames", "em_andamento", "10 quadros", 10, 100)
+    row = db.execute("SELECT started_at, done FROM job_stages WHERE job_id = ? AND stage = 'frames'", (job["id"],)).fetchone()
+    assert row["started_at"] == "2026-01-01T00:00:00Z" and row["done"] == 10
+
+
 def test_word_time_ignores_punctuation_and_case():
     cena = {"inicio": 2.0, "palavras": [{"w": "Then", "t": 0.1, "d": 0.2}, {"w": "mud", "t": 0.5, "d": 0.2}]}
     assert bq_worker.word_time(cena, "mud.") == 2.5 and bq_worker.word_time(cena, "THEN,") == 2.1
