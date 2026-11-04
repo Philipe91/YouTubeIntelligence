@@ -31,7 +31,9 @@ roteiros/gen_<id>.py → tts.py (VoiceStudio ligado) → anim/qa/rodada.sh (QA) 
   → node render.mjs --v=<id> --cortes=<json> → mix_longo.py → ffmpeg → upload manual
 ```
 
-O que impede ligar direto:
+**Atualização:** existe um caminho real para vídeos curtos em `docs/INTEGRACAO_BROTHER_QUILL.md`. O adaptador novo resolve o caminho técnico. Os itens 1 e 2 abaixo continuam abertos para vídeos publicáveis: o roteiro escolhe só entre cenas prontas, e a revisão visual segue humana.
+
+O que impedia ligar direto:
 
 1. **O roteiro é código escrito à mão por vídeo** (`gen_gunther.py` tem cenas e fontes próprias). Falta o passo mais difícil: transformar o briefing nesse roteiro. Isso exige trabalho do Claude e sua revisão.
 2. **O QA é parte do processo:** há revisão geométrica e visual obrigatória, com notas de agentes revisores. Não é um passo que se automatiza sem perder qualidade.
@@ -56,13 +58,14 @@ O que impede ligar direto:
 | `simulado` | Roda de verdade, sem custo. Não gera mídia |
 | `comando` | **Só descreve** comando, pasta, requisitos e saída. Executar retorna `pipeline_execution_disabled` |
 | `indefinido` | Etapa sem caminho encontrado. Retorna `pipeline_stage_undefined` |
+| `brother_quill_v1` | Real. Quem executa é `bq_worker.py`, com as operações de `execucao.toml`. Pedir `run` retorna `use_worker` |
 
-Os perfis ficam em `backend/config/pipelines.toml` e cada canal escolhe um na aba Configurações. O módulo não importa `subprocess`, e um teste garante isso. O agente vê o plano com `get_pipeline_plan`.
+Os perfis ficam em `backend/config/pipelines.toml` e cada canal escolhe um na aba Configurações. `pipelines.py` não importa `subprocess`, e um teste garante isso: a execução fica isolada no worker. O agente vê o plano com `get_pipeline_plan`.
 
 ## Para ligar um pipeline real
 
 1. Confirmar os comandos lendo o código de cada etapa.
 2. Escrever um adaptador novo, implementando `plan` e `run`, com suas próprias proteções.
-3. Decidir com você onde roda: pelo Claude Code, com o MCP só registrando, ou pelo estúdio chamando processos. **Recomendo pelo Claude Code:** ele já opera esses projetos, e o estúdio não ganha poder de executar comandos.
-4. Definir `YTI_ARTIFACT_ROOTS` com as pastas de saída.
+3. Seguir o modelo do Brother Quill: o agente envia dados validados, e um worker com comandos fixos executa. Assim, o texto do agente nunca vira comando.
+4. Listar o adaptador e as operações em `execucao.toml`.
 5. Testar primeiro com um trecho curto, sem o jogo aberto.

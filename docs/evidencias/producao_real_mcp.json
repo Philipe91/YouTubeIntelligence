@@ -1,0 +1,340 @@
+{
+ "aviso": "Chamadas reais do Claude Code ao servidor MCP yti-producao, em 03/11/2026. Token de prazo removido.",
+ "sessoes": [
+  {
+   "sessao": "v1_roteiro",
+   "modelo": "claude-sonnet-5-5",
+   "custo_estimado_usd": 0.1213278,
+   "chamadas": [
+    {
+     "tool": "get_job",
+     "args": {
+      "job_id": "job_8e8ab76633154d58"
+     },
+     "result": {
+      "ok": true,
+      "job_state": "authorized"
+     }
+    },
+    {
+     "tool": "get_channel_context",
+     "args": {
+      "channel_id": "chn_b0e3536cb80c467d",
+      "agent_id": "claude-code-roteirista"
+     },
+     "result": {
+      "ok": true
+     }
+    },
+    {
+     "tool": "claim_job",
+     "args": {
+      "job_id": "job_8e8ab76633154d58",
+      "agent_id": "claude-code-roteirista",
+      "idempotency_key": "claim-job_8e8ab76633154d58-1"
+     },
+     "result": {
+      "ok": true,
+      "job_state": "running"
+     }
+    },
+    {
+     "tool": "submit_script",
+     "args": {
+      "job_id": "job_8e8ab76633154d58",
+      "agent_id": "claude-code-roteirista",
+      "idempotency_key": "script-job_8e8ab76633154d58-1",
+      "script": {
+       "resumo": "The Christmas Truce of 1914: a short, dry and warm look at the unofficial pause along the Western Front.",
+       "cenas": [
+        {
+         "texto": "What stops a war for one night?",
+         "m": "mundo",
+         "set": "trincheira",
+         "quem": "remoi2"
+        },
+        {
+         "texto": "In places along the Western Front, soldiers climbed out and walked into no-man's land.",
+         "m": "mundo",
+         "set": "campo",
+         "quem": "silencio"
+        },
+        {
+         "texto": "They traded small gifts, and some buried their dead together.",
+         "m": "mundo",
+         "set": "campo",
+         "quem": "silencio"
+        },
+        {
+         "texto": "The answer was Christmas. The war resumed afterward.",
+         "m": "mundo",
+         "set": "trincheira",
+         "quem": "fim"
+        }
+       ],
+       "fontes": [
+        {
+         "label": "Imperial War Museums, articles on the Christmas Truce of 1914"
+        },
+        {
+         "label": "Stanley Weintraub, Silent Night: The Story of the World War I Christmas Truce"
+        },
+        {
+         "label": "Malcolm Brown and Shirley Seaton, Christmas Truce"
+        }
+       ],
+       "fatos_a_conferir": [
+        "The truce was local and unofficial, not along the whole front.",
+        "Gift exchanges and joint burials of the dead are well documented, but vary by sector.",
+        "Fighting resumed afterward; the date and extent differed by location.",
+        "Confirm wording 'in places' is acceptable to the owner."
+       ]
+      }
+     },
+     "result": {
+      "ok": true,
+      "accepted": true,
+      "scenes": 4,
+      "words": 39
+     }
+    },
+    {
+     "tool": "start_production_run",
+     "args": {
+      "job_id": "job_8e8ab76633154d58",
+      "idempotency_key": "run-job_8e8ab76633154d58-1"
+     },
+     "result": {
+      "ok": true,
+      "started": true,
+      "adapter": "brother_quill_v1",
+      "free_ram_gb": 3.3
+     }
+    }
+   ]
+  },
+  {
+   "sessao": "v1_validacao",
+   "modelo": "claude-sonnet-5-5",
+   "custo_estimado_usd": 0.1015932,
+   "chamadas": [
+    {
+     "tool": "get_job",
+     "args": {
+      "job_id": "job_8e8ab76633154d58"
+     },
+     "result": {
+      "ok": true,
+      "job_state": "delivered"
+     }
+    },
+    {
+     "tool": "validate_video",
+     "args": {
+      "job_id": "job_8e8ab76633154d58",
+      "agent_id": "claude-code-revisor"
+     },
+     "result": {
+      "ok": true,
+      "width": 1080,
+      "height": 1920,
+      "duration_seconds": 14.22,
+      "video_codec": "h264",
+      "audio_codec": "aac",
+      "frames": 341,
+      "size_bytes": 21334879,
+      "problems": []
+     }
+    },
+    {
+     "tool": "prepare_publish_package",
+     "args": {
+      "job_id": "job_8e8ab76633154d58",
+      "title": "The Night the War Stopped for Christmas",
+      "description": "In places along the Western Front in 1914, soldiers climbed out of their trenches and walked into no-man's land, trading small gifts and burying their dead together. The answer to what stops a war for one night was Christmas, and the war resumed afterward.",
+      "tags": [
+       "Christmas Truce 1914",
+       "World War I",
+       "history shorts"
+      ],
+      "video_artifact_id": "art_c7ee0d2aa34c430d",
+      "idempotency_key": "revisor-job_8e8ab76633154d58-package-v1",
+      "agent_id": "claude-code-revisor"
+     },
+     "result": {
+      "ok": true,
+      "job_state": "package_ready"
+     }
+    }
+   ]
+  },
+  {
+   "sessao": "v2_roteiro",
+   "modelo": "claude-sonnet-5-5",
+   "custo_estimado_usd": 0.13222509999999998,
+   "chamadas": [
+    {
+     "tool": "get_job",
+     "args": {
+      "job_id": "job_0b0b4cd15f0b4e4f"
+     },
+     "result": {
+      "ok": true,
+      "job_state": "authorized"
+     }
+    },
+    {
+     "tool": "get_job",
+     "args": {
+      "job_id": "job_8e8ab76633154d58"
+     },
+     "result": {
+      "ok": true,
+      "job_state": "package_ready"
+     }
+    },
+    {
+     "tool": "claim_job",
+     "args": {
+      "job_id": "job_0b0b4cd15f0b4e4f",
+      "agent_id": "claude-code-roteirista",
+      "idempotency_key": "claim-job_0b0b4cd15f0b4e4f-1"
+     },
+     "result": {
+      "ok": true,
+      "job_state": "running"
+     }
+    },
+    {
+     "tool": "submit_script",
+     "args": {
+      "job_id": "job_0b0b4cd15f0b4e4f",
+      "agent_id": "claude-code-roteirista",
+      "idempotency_key": "script-job_0b0b4cd15f0b4e4f-1",
+      "script": {
+       "resumo": "The Christmas Truce of 1914: a short, dry and warm look at the unofficial pause along the Western Front. No rainy night scenes.",
+       "cenas": [
+        {
+         "texto": "What stops a war for a day?",
+         "m": "mundo",
+         "set": "trincheira",
+         "quem": "frente"
+        },
+        {
+         "texto": "In places along the Western Front, soldiers climbed out and walked into no-man's land.",
+         "m": "mundo",
+         "set": "campo",
+         "quem": "silencio"
+        },
+        {
+         "texto": "They traded small gifts, and some buried their dead together.",
+         "m": "mundo",
+         "set": "trincheira",
+         "quem": "chegada"
+        },
+        {
+         "texto": "The answer was Christmas. The war resumed afterward.",
+         "m": "mundo",
+         "set": "trincheira",
+         "quem": "fim"
+        }
+       ],
+       "fontes": [
+        {
+         "label": "Imperial War Museums, articles on the Christmas Truce of 1914"
+        },
+        {
+         "label": "Stanley Weintraub, Silent Night: The Story of the World War I Christmas Truce"
+        },
+        {
+         "label": "Malcolm Brown and Shirley Seaton, Christmas Truce"
+        }
+       ],
+       "fatos_a_conferir": [
+        "The truce was local and unofficial, not along the whole front.",
+        "Gift exchanges and joint burials of the dead are well documented, but vary by sector.",
+        "Fighting resumed afterward; the date and extent differed by location.",
+        "Confirm the wording 'in places' is acceptable.",
+        "Scenes are daytime, so the picture does not claim the cold, clear night."
+       ]
+      }
+     },
+     "result": {
+      "ok": true,
+      "accepted": true,
+      "scenes": 4,
+      "words": 39
+     }
+    },
+    {
+     "tool": "start_production_run",
+     "args": {
+      "job_id": "job_0b0b4cd15f0b4e4f",
+      "idempotency_key": "run-job_0b0b4cd15f0b4e4f-1"
+     },
+     "result": {
+      "ok": true,
+      "started": true,
+      "adapter": "brother_quill_v1",
+      "free_ram_gb": 3.2
+     }
+    }
+   ]
+  },
+  {
+   "sessao": "v2_validacao",
+   "modelo": "claude-sonnet-5-5",
+   "custo_estimado_usd": 0.1031487,
+   "chamadas": [
+    {
+     "tool": "get_job",
+     "args": {
+      "job_id": "job_0b0b4cd15f0b4e4f"
+     },
+     "result": {
+      "ok": true,
+      "job_state": "delivered"
+     }
+    },
+    {
+     "tool": "validate_video",
+     "args": {
+      "job_id": "job_0b0b4cd15f0b4e4f",
+      "agent_id": "claude-code-revisor"
+     },
+     "result": {
+      "ok": true,
+      "width": 1080,
+      "height": 1920,
+      "duration_seconds": 14.0,
+      "video_codec": "h264",
+      "audio_codec": "aac",
+      "frames": 336,
+      "size_bytes": 22264068,
+      "problems": []
+     }
+    },
+    {
+     "tool": "prepare_publish_package",
+     "args": {
+      "job_id": "job_0b0b4cd15f0b4e4f",
+      "title": "The Night the War Stopped for Christmas",
+      "description": "In places along the Western Front in 1914, soldiers climbed out of their trenches and walked into no-man's land, trading small gifts and sometimes burying their dead together. The truce was local and unofficial, and the war resumed afterward.",
+      "tags": [
+       "Christmas Truce 1914",
+       "World War I history",
+       "true stories"
+      ],
+      "video_artifact_id": "art_ffec07b34dbf4f01",
+      "idempotency_key": "revisor-pkg-job_0b0b4cd15f0b4e4f-v1",
+      "agent_id": "claude-code-revisor"
+     },
+     "result": {
+      "ok": true,
+      "job_state": "package_ready"
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -24,6 +24,8 @@ powershell -ExecutionPolicy Bypass -File scripts\iniciar.ps1
 powershell -ExecutionPolicy Bypass -File scripts\parar.ps1
 ```
 
+Ao ligar, `iniciar.ps1` cria o token da API em `data/.api_token`, visível só para sua conta. Toda escrita e todo download exigem esse token, e o navegador nunca o recebe.
+
 Abra <http://127.0.0.1:3000/canais>. Ligado, o painel usa cerca de 270 MB; desligado, nada. O servidor MCP não entra nesses scripts: o Claude Code o liga quando precisa. Detalhes em `docs/MEMORIA.md`. Depois de alterar o frontend, rode `npm run build` de novo.
 
 Para recriar os dados fictícios de pesquisa: `uv run python -m app.cli demo-reset`, na pasta `backend`. Isso não toca nos seus canais.
@@ -43,7 +45,15 @@ Abra o Claude Code nesta pasta e aprove o servidor `yti-producao` definido em `.
 
 O agente lê, propõe, pede produção e entrega arquivos. Autorizar é com você, no painel, e **não existe publicação**.
 
-**A produção ainda é simulada.** O ciclo completo foi testado com dados fictícios (`docs/RELATORIO_CICLO.md`); nenhum pipeline real está ligado. Para conectar o primeiro canal real, veja `docs/PRIMEIRO_CANAL_REAL.md`.
+### Produção real
+
+Canais com o perfil Brother Quill têm o botão **Autorizar produção real**. O Claude Code assume a tarefa e escreve o roteiro. Um worker renderiza um vídeo curto em uma cópia isolada do projeto. O painel mostra etapas, quadros contados no disco, vídeo e revisão. Nada é publicado.
+
+**Situação:** o caminho funciona de ponta a ponta, com dois vídeos reais de cerca de 14 s, mas **eles são demonstrações e não estão prontos para publicar**: os cenários não contam a história pedida, a voz não é a do canal e os fatos não foram conferidos. O limite atual é de 20 s. Veja `docs/INTEGRACAO_BROTHER_QUILL.md`.
+
+Os outros perfis (`viral_replicator`, `money_printer`) só descrevem o que fariam, e para eles existe apenas a simulação (`docs/RELATORIO_CICLO.md`).
+
+**Requisitos da produção real:** Python do sistema com `edge_tts`, `ffmpeg` e `ffprobe` no PATH, Google Chrome, projetos em `D:\projetos\BROTHER QUILL` e `D:\ViralReplicator_motion` e 2 GB de memória livre. Ajuste em `backend/config/execucao.toml`.
 
 ## Testes
 
@@ -56,7 +66,7 @@ npm run typecheck
 
 Os testes não acessam a rede: as APIs são simuladas.
 
-Para o ciclo completo, com navegador, MCP real, queda e reinício, use uma pasta vazia fora de `data/` e o frontend já compilado:
+Veja `docs/TESTES.md`. Para o ciclo completo, com navegador, MCP real, queda e reinício, use uma pasta vazia fora de `data/` e o frontend já compilado:
 
 ```powershell
 uv run --directory backend --with playwright python ../scripts/teste_ciclo_completo.py --dados C:\temp\ciclo --saida ../docs/evidencias
@@ -148,6 +158,8 @@ claude mcp add --transport http vidiq https://mcp.vidiq.com/mcp
 
 - [Arquitetura](ARQUITETURA.md)
 - [Plano](PLANO.md)
+- [Integração com o Brother Quill](docs/INTEGRACAO_BROTHER_QUILL.md)
+- [Testes](docs/TESTES.md)
 - [Relatório do ciclo completo](docs/RELATORIO_CICLO.md)
 - [Primeiro canal real](docs/PRIMEIRO_CANAL_REAL.md)
 - [Pipelines existentes](docs/PIPELINES.md)

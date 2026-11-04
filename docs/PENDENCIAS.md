@@ -6,7 +6,8 @@ Situação em 03/11/2026. Para o primeiro canal real, veja `docs/PRIMEIRO_CANAL_
 
 | Item | Motivo |
 |---|---|
-| Definir onde a produção real roda | Pelo Claude Code, com o estúdio só registrando, ou pelo estúdio. Veja `docs/PIPELINES.md` |
+| Revisar o vídeo `job_0b0b4cd15f0b4e4f` | No painel do Brother Quill. Nada foi publicado |
+| Autorizar a correção do céu no projeto original | Hoje vale só na cópia de cada tarefa. Veja `docs/INTEGRACAO_BROTHER_QUILL.md` |
 | Cadastrar seus canais reais | A central já aceita |
 | Decidir sobre o pedido ao Google | Sem aprovação, scores e VPH ficam bloqueados com dados reais. Veja `docs/CONFORMIDADE.md` |
 | Chave da YouTube Data API e cliente OAuth | Opcionais para produzir; necessários para dados reais |
@@ -24,9 +25,9 @@ Passou em testes com mocks e nunca falou com o serviço verdadeiro:
 
 | Item | Situação |
 |---|---|
-| Pipeline real de produção | Adaptadores só descrevem. Só a simulação executa |
-| Tarefa real pela interface | "Disponibilizar" cria só tarefa simulada |
-| Gerar roteiro a partir do briefing | Não existe |
+| Vídeo publicável | O caminho técnico funciona, mas faltam cenas sob medida, voz do canal e revisor visual. Veja `docs/INTEGRACAO_BROTHER_QUILL.md` |
+| Produção real em outros perfis | `viral_replicator` e `money_printer` só descrevem |
+| Vídeo acima de 20 s | Limite de segurança em `execucao.toml`, ainda não testado acima disso |
 | Publicação | Fora do escopo, de propósito |
 | Botão "Aprovar" para o pacote | O pacote termina em revisão; você publica no Studio |
 | Escrita de recomendações com IA pelo painel | Rascunhos por regras. Para texto escrito, use o Claude Code com `submit_recommendation` |
@@ -47,7 +48,8 @@ Passou em testes com mocks e nunca falou com o serviço verdadeiro:
 
 ## Limitações conhecidas
 
-- **Autorização não é barreira de segurança:** a API local não tem login. Um programa na sua máquina, ou um agente com acesso ao terminal, pode chamar `authorize` ou editar `compliance.toml`.
+- **Autorização não é barreira total:** a API exige token, mas um agente com terminal irrestrito na sua conta consegue ler `data/.api_token` ou editar `compliance.toml` e `execucao.toml`.
+- **Pastas de produção não são apagadas sozinhas:** cada vídeo fica em `data/producao/<tarefa>/`, com cópia do motor, narração e o MP4.
 - **Aprovação não verificável:** o aplicativo não confirma nada com o Google.
 - **`.mcp.json` depende do ambiente:** aponta para `backend/.venv/Scripts/python.exe`. Rode `uv sync` antes, e abra o Claude Code na raiz do projeto.
 - **Arquivos de teste não são apagados:** ficam em `data/artefatos_teste/`. Remover um canal apaga os registros, mas não esses arquivos.

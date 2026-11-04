@@ -72,13 +72,16 @@ O registro é uma declaração sua de que o Google aprovou o uso. O app não con
 | `store.py` | Canais, concorrentes, histórico, calendário, recomendações. Consultas limitadas por canal |
 | `recommend.py` | Cruza pesquisas com o perfil editorial. Canal real nunca usa dado fictício |
 | `contract.py` | Contrato `yti.agent.v1`: estados, idempotência, lease, recuperação |
-| `pipelines.py` | Adaptadores por etapa. Só o simulado executa; os demais apenas descrevem |
+| `pipelines.py` | Adaptadores por etapa. Só descreve e escolhe; não executa processos |
+| `bq_script.py` | Valida o roteiro do agente contra o catálogo fechado |
+| `bq_worker.py` | Worker da produção real, em processo próprio. Lista de operações, sem shell, progresso medido no disco |
+| `production.py` | Inicia o worker, valida o arquivo e grava a revisão humana |
 | `simulator.py` | Agente simulado, uma etapa por chamada, sem render. Gera só um texto de teste |
 | `mcp_server.py` | Servidor MCP stdio para o Claude Code. Sem ferramentas de autorizar ou publicar |
 | `status.py` | Estado do YouTube e do Claude, só leitura e sem rede |
 | `router.py` | API usada pelo dashboard |
 
-Contrato em `docs/CONTRATO_AGENTE.md`.
+Contrato em `docs/CONTRATO_AGENTE.md`. Produção real em `docs/INTEGRACAO_BROTHER_QUILL.md`.
 
 ## 4. Banco de dados
 
@@ -145,7 +148,10 @@ Quatro indicadores separados, de 0 a 100:
 |---|---|
 | Vazamento de chave | Chave só no `.env`, ignorado pelo git; filtro de log remove `key=`, tokens e `Bearer` |
 | Tokens OAuth | Refresh token no Gerenciador de Credenciais do Windows, via `keyring`; nunca no SQLite |
-| Exposição de rede | API e front escutam só em `127.0.0.1`; CORS restrito |
+| Exposição de rede | API e front escutam só em `127.0.0.1`; CORS restrito; host fora da lista é recusado |
+| Acesso à API local | Escrita e download exigem token em `data/.api_token`, entregue só ao servidor do painel |
+| Execução de comandos | Só as operações de `execucao.toml`, montadas no código, sem shell. Texto externo nunca vira argumento |
+| Arquivos | Cada tarefa tem pasta própria; caminhos fora dela são recusados |
 | Injeção de prompt | Títulos e descrições de terceiros entram em bloco de dados não confiáveis, higienizados; provedor CLI roda sem ferramentas; saída validada |
 | Ações em canais | Escopos OAuth somente leitura. Não há código de escrita no YouTube |
 | Revogação | `delete-channel-data` e revogação apagam tokens e dados do canal |
