@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 import logging
+import secrets
 import sqlite3
 from collections.abc import Iterator
 
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from . import demo, services
@@ -45,6 +47,30 @@ def conn_dep(settings: Settings = Depends(settings_dep)) -> Iterator[sqlite3.Con
 
 
 app.include_router(studio_router.router)
+
+SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
+ALLOWED_HOSTS = {"127.0.0.1", "localhost"}
+
+
+def _needs_token(method: str, path: str) -> bool:
+    """Toda escrita e todo download de arquivo. Leituras seguem abertas só para a própria máquina."""
+    return method not in SAFE_METHODS or "/artifacts/" in path
+
+
+@app.middleware("http")
+async def local_guard(request: Request, call_next):
+    # Host fixo impede que um site aberto no navegador alcance a API por DNS rebinding.
+    host = request.headers.get("host", "").rsplit(":", 1)[0].strip("[]")
+    if host not in ALLOWED_HOSTS:
+        return JSONResponse(status_code=403, content={"error": {"code": "host_not_allowed", "message": "Host não permitido.", "retryable": False}})
+    if _needs_token(request.method, request.url.path):
+        provider = request.app.dependency_overrides.get(settings_dep, settings_dep)
+        expected = provider().api_token
+        if not expected:
+            return JSONResponse(status_code=503, content={"error": {"code": "auth_not_configured", "message": "Token da API não configurado.", "retryable": False}})
+        if not secrets.compare_digest(request.headers.get("x-yti-token", ""), expected):
+            return JSONResponse(status_code=401, content={"error": {"code": "unauthorized", "message": "Token da API ausente ou inválido.", "retryable": False}})
+    return await call_next(request)
 
 
 @app.exception_handler(StudioError)

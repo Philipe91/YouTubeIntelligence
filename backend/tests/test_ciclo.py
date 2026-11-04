@@ -421,9 +421,9 @@ def test_studio_migration_preserves_recommendations_and_jobs(tmp_path):
 
 @pytest.fixture
 def api(tmp_path):
-    settings = Settings(mode="demo", data_dir=tmp_path)
+    settings = Settings(mode="demo", data_dir=tmp_path, api_token="teste")
     main.app.dependency_overrides[main.settings_dep] = lambda: settings
-    yield TestClient(main.app)
+    yield TestClient(main.app, base_url="http://127.0.0.1", headers={"X-YTI-Token": "teste"})
     main.app.dependency_overrides.clear()
 
 

@@ -732,9 +732,9 @@ def test_full_flow_niche_channel_videos_performance_opportunity(conn, live_setti
 def api(tmp_path, monkeypatch):
     from app.config import Settings
 
-    settings = Settings(mode="demo", data_dir=tmp_path)
+    settings = Settings(mode="demo", data_dir=tmp_path, api_token="teste")
     main.app.dependency_overrides[main.settings_dep] = lambda: settings
-    yield TestClient(main.app)
+    yield TestClient(main.app, base_url="http://127.0.0.1", headers={"X-YTI-Token": "teste"})
     main.app.dependency_overrides.clear()
 
 
@@ -766,7 +766,7 @@ def test_system_endpoint_exposes_no_secret(tmp_path):
     settings = Settings(mode="live", youtube_api_key="AIzaSECRETSECRETSECRET1234567", data_dir=tmp_path)
     main.app.dependency_overrides[main.settings_dep] = lambda: settings
     try:
-        body = TestClient(main.app).get("/api/system").text
+        body = TestClient(main.app, base_url="http://127.0.0.1").get("/api/system").text
     finally:
         main.app.dependency_overrides.clear()
     assert "AIzaSECRET" not in body

@@ -292,10 +292,12 @@ def pipeline(channel_id: str, conn=Depends(studio_conn)):
 
 
 @router.get("/channels/{channel_id}/jobs/{job_id}/artifacts/{artifact_id}")
-def download_artifact(channel_id: str, job_id: str, artifact_id: str, conn=Depends(studio_conn), settings=Depends(_settings)):
+def download_artifact(channel_id: str, job_id: str, artifact_id: str, inline: int = 0, conn=Depends(studio_conn), settings=Depends(_settings)):
     path, name = Contract(conn, settings).artifact_file(channel_id, job_id, artifact_id)
-    # Sempre como download: o conteúdo do arquivo nunca é interpretado pelo navegador.
-    return FileResponse(path, media_type="application/octet-stream", filename=name, headers={"X-Content-Type-Options": "nosniff"})
+    # Só vídeo MP4 e imagem JPEG podem abrir na página. O resto é sempre anexo, sem interpretação do navegador.
+    media = {".mp4": "video/mp4", ".jpg": "image/jpeg"}.get(path.suffix.lower()) if inline else None
+    return FileResponse(path, media_type=media or "application/octet-stream", filename=name,
+                        content_disposition_type="inline" if media else "attachment", headers={"X-Content-Type-Options": "nosniff"})
 
 
 @router.get("/calendar")

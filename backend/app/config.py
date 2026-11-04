@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import secrets
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -76,6 +77,7 @@ class Settings:
     data_dir: Path = ROOT_DIR / "data"
     artifact_roots: tuple[str, ...] = ()
     legacy_approval_env_set: bool = False
+    api_token: str = ""  # Vazio recusa toda ação protegida: falha fechada.
     scoring: dict[str, Any] = field(default_factory=load_scoring)
     quota: dict[str, Any] = field(default_factory=load_quota)
     compliance: ComplianceRecord = field(default_factory=load_compliance)
@@ -108,6 +110,23 @@ class Settings:
         return limits
 
 
+def load_api_token(data_dir: Path) -> str:
+    """Token da API local: variável de ambiente ou arquivo na pasta de dados, criado na primeira vez."""
+    from_env = os.getenv("YTI_API_TOKEN", "").strip()
+    if from_env:
+        return from_env
+    path = data_dir / ".api_token"
+    try:
+        if path.exists():
+            return path.read_text(encoding="ascii").strip()
+        data_dir.mkdir(parents=True, exist_ok=True)
+        token = secrets.token_urlsafe(32)
+        path.write_text(token, encoding="ascii")
+        return token
+    except OSError:
+        return ""
+
+
 def get_settings() -> Settings:
     load_dotenv(ROOT_DIR / ".env", override=False)
     mode = os.getenv("YTI_MODE", "demo").strip().lower()
@@ -122,6 +141,7 @@ def get_settings() -> Settings:
     data_dir = os.getenv("YTI_DATA_DIR", "").strip()
     roots = tuple(item.strip() for item in os.getenv("YTI_ARTIFACT_ROOTS", "").split(";") if item.strip())
     extra: dict[str, Any] = {"data_dir": Path(data_dir)} if data_dir else {}
+    extra["api_token"] = load_api_token(extra.get("data_dir", Settings.data_dir))
     return Settings(
         mode=mode,
         youtube_api_key=os.getenv("YOUTUBE_API_KEY", "").strip(),

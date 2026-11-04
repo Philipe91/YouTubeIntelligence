@@ -148,9 +148,10 @@ class AgenteMcp:
         return len(alvos)
 
 
-def http_status(url: str) -> int:
+def http_status(url: str, dados: Path | None = None) -> int:
+    headers = {"X-YTI-Token": (dados / ".api_token").read_text(encoding="ascii").strip()} if dados else {}
     try:
-        return urllib.request.urlopen(url, timeout=20).status
+        return urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=20).status
     except urllib.error.HTTPError as erro:
         return erro.code
 
@@ -359,7 +360,8 @@ def ciclo(pagina, dados: Path, telas: Path) -> None:
     outro = agente.ok("list_jobs", channel_id=OUTRO_CANAL)["jobs"]
     assert job_id not in [j["id"] for j in outro]
     assert http_status(f"{API}/api/studio/channels/{OUTRO_CANAL}/jobs/{job_id}") == 404
-    assert http_status(f"{API}/api/studio/channels/{OUTRO_CANAL}/jobs/{job_id}/artifacts/{arquivo['id']}") == 404
+    assert http_status(f"{API}/api/studio/channels/{OUTRO_CANAL}/jobs/{job_id}/artifacts/{arquivo['id']}") == 401, "sem token"
+    assert http_status(f"{API}/api/studio/channels/{OUTRO_CANAL}/jobs/{job_id}/artifacts/{arquivo['id']}", dados) == 404, "com token, canal errado"
     recomendacao = depois["job"]["recommendation_id"]
     assert agente.erro_de("start_production", channel_id=OUTRO_CANAL, recommendation_id=recomendacao, idempotency_key="cruzado", agent_id="agente-teste-B") == "recommendation_not_in_channel"
     pagina.goto(f"{WEB}/canais/{OUTRO_CANAL}", wait_until="networkidle")

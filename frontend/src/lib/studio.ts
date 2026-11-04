@@ -88,6 +88,11 @@ export interface JobDetail {
   package: { id: string; title: string; description: string; tags: string[]; checklist: string[]; state: string; created_at: string } | null;
 }
 
+/** Só roda no servidor do Next: o token nunca chega ao navegador. */
+export function authHeaders(): Record<string, string> {
+  return { "X-YTI-Token": process.env.YTI_API_TOKEN ?? "" };
+}
+
 export async function studioGet<T>(path: string, params?: Record<string, string | undefined>): Promise<T> {
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(params ?? {})) if (value) query.set(key, value);
@@ -115,7 +120,7 @@ export type WriteResult = { ok: true; data: Record<string, unknown> } | { ok: fa
 export async function studioWrite(method: "POST" | "PATCH", path: string, body?: unknown): Promise<WriteResult> {
   try {
     const response = await fetch(`${API_URL}/api/studio${path}`, {
-      method, cache: "no-store", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body ?? {}),
+      method, cache: "no-store", headers: { "Content-Type": "application/json", ...authHeaders() }, body: JSON.stringify(body ?? {}),
     });
     const data = await response.json().catch(() => ({}));
     if (response.ok) return { ok: true, data };

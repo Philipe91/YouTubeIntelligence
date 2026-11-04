@@ -87,7 +87,7 @@ class DescribedCommandAdapter:
         project = self.config.get("project")
         return StagePlan(
             stage=request.stage, adapter="comando", can_execute=False, simulated=False, project=project,
-            project_found=Path(project).exists() if project else None, command_preview=self.config.get("command"),
+            project_found=Path(project).expanduser().exists() if project else None, command_preview=self.config.get("command"),
             output=self.config.get("output"), heavy=bool(self.config.get("heavy")), requires=tuple(self.config.get("requires", ())),
             notes=self.config.get("notes"), blocked_reason=self.REASON,
         )

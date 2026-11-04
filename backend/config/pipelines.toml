@@ -61,21 +61,21 @@ label = "ViralReplicator (geração local via ComfyUI)"
 
 [profiles.viral_replicator.stages.roteiro]
 adapter = "comando"
-project = 'C:\Users\ph_re\Documents\ViralReplicator'
+project = '~/Documents/ViralReplicator'
 command = "produto: canais/<id>.json"
 output = "canais/<id>.json"
 notes = "Roteiro é um JSON do canal. O projeto tem fluxo próprio com Codex: leia AGENTS.md antes de ligar."
 
 [profiles.viral_replicator.stages.narracao]
 adapter = "comando"
-project = 'C:\Users\ph_re\Documents\ViralReplicator'
+project = '~/Documents/ViralReplicator'
 command = "python produce_video.py --etapa <etapa> <roteiro>"
 output = "output/"
 notes = "O orquestrador produce_video.py cobre as etapas; nomes e argumentos a confirmar."
 
 [profiles.viral_replicator.stages.animacao]
 adapter = "comando"
-project = 'C:\Users\ph_re\Documents\ViralReplicator'
+project = '~/Documents/ViralReplicator'
 command = "python produce_video.py --etapa <etapa> <roteiro>"
 output = "output/clips/"
 heavy = true
@@ -84,14 +84,14 @@ notes = "Usa GPU."
 
 [profiles.viral_replicator.stages.renderizacao]
 adapter = "comando"
-project = 'C:\Users\ph_re\Documents\ViralReplicator'
+project = '~/Documents/ViralReplicator'
 command = "python produce_video.py --montagem pro <roteiro>"
 output = "output/"
 heavy = true
 
 [profiles.viral_replicator.stages.thumbnail]
 adapter = "comando"
-project = 'C:\Users\ph_re\Documents\ViralReplicator'
+project = '~/Documents/ViralReplicator'
 command = "python comfy_batch.py"
 output = "output/thumbs/"
 heavy = true

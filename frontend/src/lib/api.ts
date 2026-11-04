@@ -238,7 +238,7 @@ export async function postGenerate(topic: string, format: string): Promise<{ ok:
   try {
     const response = await fetch(`${API_URL}/api/generate`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "X-YTI-Token": process.env.YTI_API_TOKEN ?? "" },
       body: JSON.stringify({ topic, format }),
       cache: "no-store",
     });
