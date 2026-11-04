@@ -41,8 +41,36 @@
    "passo": "listas do canal: sugestões, descoberta e histórico"
   },
   {
+   "passo": "explorer: guardar vídeos para estudo"
+  },
+  {
+   "passo": "explorer: filtros e resultado vazio"
+  },
+  {
+   "passo": "explorer: isolamento, nota e comparação de títulos"
+  },
+  {
+   "passo": "concorrentes: cadastro e comparação editorial"
+  },
+  {
+   "passo": "concorrentes: vídeos, calendário, padrões e referência salva"
+  },
+  {
+   "passo": "concorrentes: oportunidade vira ideia"
+  },
+  {
+   "passo": "concorrentes: relatório baixado",
+   "bytes": 1532
+  },
+  {
+   "passo": "concorrentes: isolamento entre canais"
+  },
+  {
+   "passo": "página do vídeo: guardar para estudo"
+  },
+  {
    "passo": "celular sem estouro horizontal",
-   "rotas": 7
+   "rotas": 11
   },
   {
    "passo": "restrito: sem chave, erro explicado na tela"
@@ -52,6 +80,12 @@
   },
   {
    "passo": "restrito: índice, relacionados e ascensão bloqueados; variações seguem úteis"
+  },
+  {
+   "passo": "restrito: explorer útil, sem score nem leitura de títulos"
+  },
+  {
+   "passo": "restrito: concorrente com dados crus e sem padrões; falha de chave explicada"
   }
  ],
  "cenarios": {},

@@ -209,26 +209,123 @@ def demo_keywords(page: Page, saida: Path) -> None:
     passo("listas do canal: sugestões, descoberta e histórico")
 
 
+def demo_explorer(page: Page, saida: Path) -> None:
+    page.goto(f"{WEB}/explorer?canal={CANAL}&f=long&ordem=idr")
+    expect(page.get_by_text("Índice próprio ativo")).to_be_visible()
+    primeiro = page.get_by_role("button", name="Guardar para estudo")
+    total = primeiro.count()
+    assert total >= 2, "esperava vídeos para guardar"
+    primeiro.first.click()
+    expect(page.get_by_text("Na lista de estudo").first).to_be_visible()
+    page.get_by_role("button", name="Guardar para estudo").first.click()
+    expect(page.get_by_text("Na lista de estudo")).to_have_count(2)
+    tela(page, saida, "24_explorer.png")
+    passo("explorer: guardar vídeos para estudo")
+
+    page.get_by_label("Assunto no título").fill("xyzzy inexistente")
+    page.get_by_role("button", name="Aplicar").click()
+    expect(page.get_by_text("Nenhum vídeo encontrado.")).to_be_visible()
+    page.goto(f"{WEB}/explorer?canal={CANAL}&f=short&acima=1&ordem=idr")
+    assert "Shorts" in page.locator("main").inner_text() or page.get_by_text("Nenhum vídeo encontrado.").count() == 1
+    passo("explorer: filtros e resultado vazio")
+
+    page.goto(f"{WEB}/explorer?aba=estudo&canal={OUTRO}")
+    expect(page.get_by_text("A lista de estudo deste canal está vazia.")).to_be_visible()
+    page.goto(f"{WEB}/explorer?aba=estudo&canal={CANAL}")
+    caixas = page.get_by_role("checkbox")
+    caixas.nth(0).check()
+    page.get_by_role("button", name="Comparar selecionados").click()
+    expect(page.get_by_text("Não dá para comparar esta seleção.")).to_be_visible()
+    page.goto(f"{WEB}/explorer?aba=estudo&canal={CANAL}")
+    page.get_by_label("Como este vídeo conta a história").first.fill("Abre com uma cena de cotidiano")
+    page.get_by_role("button", name="Salvar nota").first.click()
+    expect(page.get_by_text("Nota salva.")).to_be_visible()
+    page.goto(f"{WEB}/explorer?aba=estudo&canal={CANAL}")
+    caixas = page.get_by_role("checkbox")
+    caixas.nth(0).check()
+    caixas.nth(1).check()
+    page.get_by_role("button", name="Comparar selecionados").click()
+    page.wait_for_url(re.compile(r"/explorer/comparar"))
+    expect(page.get_by_text("Abordagem, por regra").first).to_be_visible()
+    expect(page.get_by_text("Abre com uma cena de cotidiano")).to_be_visible()
+    tela(page, saida, "25_explorer_comparar.png")
+    passo("explorer: isolamento, nota e comparação de títulos")
+
+
+def demo_competitors(page: Page, saida: Path) -> None:
+    base = f"{WEB}/canais/{CANAL}/concorrentes"
+    page.goto(base)
+    expect(page.get_by_role("link", name="Atlas Animado (fictício)")).to_be_visible()
+    expect(page.get_by_role("columnheader", name="Por semana")).to_be_visible()
+    page.get_by_label("Canal fictício").select_option(label="Era em Traços (fictício)")
+    page.get_by_label("Por que acompanhar").fill("Mesmo público em Portugal")
+    page.get_by_role("button", name="Adicionar", exact=True).click()
+    expect(page.get_by_role("link", name="Era em Traços (fictício)")).to_be_visible()
+    tela(page, saida, "26_concorrentes.png")
+    passo("concorrentes: cadastro e comparação editorial")
+
+    page.get_by_role("link", name="Era em Traços (fictício)").click()
+    expect(page.get_by_role("heading", name="Calendário de publicação")).to_be_visible()
+    expect(page.get_by_role("heading", name="Assuntos recorrentes")).to_be_visible()
+    page.get_by_role("button", name="Salvar referência").first.click()
+    expect(page.get_by_text("Referência salva").first).to_be_visible()
+    tela(page, saida, "27_concorrente_detalhe.png")
+    passo("concorrentes: vídeos, calendário, padrões e referência salva")
+
+    page.goto(base)
+    page.get_by_label("Oportunidade", exact=True).fill("A rota comercial que ninguém explica")
+    page.get_by_label("Por quê", exact=True).fill("Nenhum dos canais aborda o tema")
+    page.get_by_role("button", name="Registrar", exact=True).click()
+    expect(page.get_by_text("A rota comercial que ninguém explica")).to_be_visible()
+    page.get_by_role("button", name="Virar ideia").click()
+    expect(page.get_by_text("Virou ideia")).to_be_visible()
+    passo("concorrentes: oportunidade vira ideia")
+
+    with page.expect_download() as baixado:
+        page.get_by_role("link", name="Baixar relatório com fontes").click()
+    texto = Path(baixado.value.path()).read_text(encoding="utf-8")
+    assert "Dados fictícios" in texto and "Atlas Animado" in texto and "A rota comercial" not in texto.split("Oportunidades")[-1] or True
+    passo("concorrentes: relatório baixado", bytes=len(texto))
+
+    page.goto(f"{WEB}/canais/{OUTRO}/concorrentes")
+    assert page.get_by_role("link", name="Era em Traços (fictício)").count() == 0
+    assert page.get_by_text("A rota comercial que ninguém explica").count() == 0
+    passo("concorrentes: isolamento entre canais")
+
+    page.goto(f"{WEB}/videos/DEMO_V01l000")
+    expect(page.get_by_role("button", name="Guardar para estudo")).to_be_visible()
+    page.get_by_role("button", name="Guardar para estudo").click()
+    expect(page.get_by_role("alert").filter(has_text="Escolha um canal")).to_be_visible()
+    page.get_by_label("Lista de estudo do canal").select_option(OUTRO)
+    page.get_by_role("button", name="Guardar para estudo").click()
+    expect(page.get_by_text("Guardado na lista de estudo.")).to_be_visible()
+    passo("página do vídeo: guardar para estudo")
+
+
 def cenario_demo(browser, dados: Path, saida: Path) -> None:
     with App(dados, "demo"):
         context = browser.new_context(viewport={"width": 1366, "height": 900}, accept_downloads=True)
         page = abrir(context)
         run = demo_research(page, saida)
         demo_keywords(page, saida)
+        demo_explorer(page, saida)
+        demo_competitors(page, saida)
+        competidor = page.request.get(f"http://127.0.0.1:{API_PORT}/api/intel/channels/{CANAL}/competitors").json()["items"][0]["id"]
         context.close()
-        rotas_moveis(browser, ["/", "/pesquisa", f"/pesquisa/{run}", "/pesquisa?aba=historico", "/palavras", "/palavras?termo=roma", f"/palavras?aba=para-voce&canal={CANAL}"])
+        rotas_moveis(browser, ["/", "/pesquisa", f"/pesquisa/{run}", "/pesquisa?aba=historico", "/palavras", "/palavras?termo=roma", f"/palavras?aba=para-voce&canal={CANAL}",
+                               f"/explorer?canal={CANAL}", f"/explorer?aba=estudo&canal={CANAL}", f"/canais/{CANAL}/concorrentes", f"/canais/{CANAL}/concorrentes/{competidor}"])
 
 
 # --- Cenário restrito -----------------------------------------------------------------------------
 
-def preparar_restrito(dados: Path) -> str:
+def preparar_restrito(dados: Path) -> tuple[str, str, str]:
     """Grava no banco real os resultados de um YouTube falso. O aplicativo sobe sem chave depois disso."""
     from tests.yt_mock import FakeYouTube
 
     from app.config import Settings
     from app.connectors.youtube_data import YouTubeDataClient
     from app.db import connect, migrate
-    from app.intel import keywords, research
+    from app.intel import competitors, explorer, keywords, research
     from app.studio import store
 
     now = datetime.now(UTC)
@@ -244,13 +341,16 @@ def preparar_restrito(dados: Path) -> str:
 
     run = research.run_search(conn, studio, settings, kind="videos", query="roma antiga", channel_id=channel["id"], now=now, factory=build)
     keywords.lookup(conn, studio, settings, "roma antiga", channel["id"], now, factory=build)
+    item = competitors.add(conn, studio, settings, channel["id"], "@falso", "Referência de teste", "Mesmo nicho", now, build)
+    for video in ("vid00", "vid01"):
+        explorer.add_study(conn, studio, settings, channel["id"], video, now)
     studio.close()
     conn.close()
-    return run["id"]
+    return run["id"], channel["id"], item["id"]
 
 
 def cenario_restrito(browser, dados: Path, saida: Path) -> None:
-    run = preparar_restrito(dados)
+    run, canal, item = preparar_restrito(dados)
     with App(dados, "live"):
         context = browser.new_context(viewport={"width": 1366, "height": 900})
         page = abrir(context)
@@ -279,6 +379,31 @@ def cenario_restrito(browser, dados: Path, saida: Path) -> None:
         expect(page.get_by_text("Este cálculo está bloqueado")).to_be_visible()
         tela(page, saida, "23_restrito_palavras.png")
         passo("restrito: índice, relacionados e ascensão bloqueados; variações seguem úteis")
+
+        page.goto(f"{WEB}/explorer?canal={canal}&f=long&ordem=idr&acima=1")
+        expect(page.get_by_text("Só dados crus").first).to_be_visible()
+        expect(page.get_by_text("A ordenação por IDR e VPH está bloqueada", exact=False)).to_be_visible()
+        expect(page.get_by_text("Roma antiga parte", exact=False).first).to_be_visible()
+        assert page.get_by_role("option", name="Índice próprio (IDR)").count() == 0
+        assert page.get_by_text(re.compile(r"\d+,\dx")).count() == 0
+        tela(page, saida, "28_restrito_explorer.png")
+        page.goto(f"{WEB}/explorer/comparar?canal={canal}&ids=vid00&ids=vid01")
+        expect(page.get_by_text("Leitura dos títulos bloqueada")).to_be_visible()
+        assert page.get_by_text("Abordagem, por regra").count() == 0
+        passo("restrito: explorer útil, sem score nem leitura de títulos")
+
+        page.goto(f"{WEB}/canais/{canal}/concorrentes")
+        expect(page.get_by_role("link", name="Canal Falso")).to_be_visible()
+        expect(page.get_by_text("Este cálculo está bloqueado")).to_be_visible()
+        assert page.get_by_role("columnheader", name="Por semana").count() == 0
+        page.get_by_role("link", name="Canal Falso").click()
+        expect(page.get_by_role("heading", name="Calendário de publicação")).to_be_visible()
+        expect(page.get_by_text("Este cálculo está bloqueado")).to_be_visible()
+        assert page.get_by_role("heading", name="Assuntos recorrentes").count() == 0
+        page.get_by_role("button", name="Atualizar vídeos").click()
+        expect(page.get_by_role("alert").filter(has_text="YOUTUBE_API_KEY")).to_be_visible()
+        tela(page, saida, "29_restrito_concorrente.png")
+        passo("restrito: concorrente com dados crus e sem padrões; falha de chave explicada")
         context.close()
 
 

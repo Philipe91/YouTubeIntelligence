@@ -362,6 +362,8 @@ export default async function ChannelPage({ params, searchParams }: { params: Pr
       )}
 
       {tab === "concorrentes" && (
+        <>
+        <p className="mb-3 text-sm"><Link className="text-cobalt underline underline-offset-2" href={`/canais/${channel.id}/concorrentes`}>Abrir vídeos, calendário, oportunidades e relatório dos concorrentes</Link></p>
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_20rem]">
           <Panel>
             {channel.competitors.length === 0 ? <Empty title="Nenhum concorrente associado." /> : (
@@ -377,7 +379,7 @@ export default async function ChannelPage({ params, searchParams }: { params: Pr
           </Panel>
           <Panel className="h-fit p-4">
             <SectionTitle>Associar concorrente</SectionTitle>
-            <p className="mt-0.5 mb-3 text-[0.8125rem] text-ink-3">Só guarda a referência. Para coletar dados, use add-channel no modo real.</p>
+            <p className="mt-0.5 mb-3 text-[0.8125rem] text-ink-3">Só guarda a referência, sem coletar nada. Para coletar vídeos, use a página de concorrentes.</p>
             <ActionForm action={addCompetitor} submit="Associar concorrente" resetOnSuccess hidden={{ channel_id: channel.id }}>
               <div className="mb-3 space-y-2">
                 <label className="block text-[0.8125rem] text-ink-2">Nome<input name="name" required className="field mt-1 w-full" /></label>
@@ -387,6 +389,7 @@ export default async function ChannelPage({ params, searchParams }: { params: Pr
             </ActionForm>
           </Panel>
         </div>
+        </>
       )}
 
       {tab === "configuracoes" && (

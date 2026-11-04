@@ -76,3 +76,52 @@ export async function addFavorite(previous: ActionState, data: FormData): Promis
 export async function removeFavorite(previous: ActionState, data: FormData): Promise<ActionState> {
   return done(previous, await intelWrite(`/channels/${seg(text(data, "channel_id"))}/keywords/favorites/remove`, { term: text(data, "term") }), "/palavras");
 }
+
+// --- Outlier Explorer --------------------------------------------------------------------------
+
+export async function addStudy(previous: ActionState, data: FormData): Promise<ActionState> {
+  const channel = text(data, "channel_id");
+  if (!channel) return { error: "Escolha um canal.", done: previous.done };
+  return done(previous, await intelWrite(`/channels/${seg(channel)}/study`, { video_id: text(data, "video_id"), origin: text(data, "origin") || "explorer", note: text(data, "note") }), "/explorer", `/videos/${text(data, "video_id")}`, `/canais/${channel}/concorrentes`);
+}
+
+export async function saveStudyNote(previous: ActionState, data: FormData): Promise<ActionState> {
+  return done(previous, await intelWrite(`/channels/${seg(text(data, "channel_id"))}/study/note`, { video_id: text(data, "video_id"), note: text(data, "note") }), "/explorer");
+}
+
+export async function removeStudy(previous: ActionState, data: FormData): Promise<ActionState> {
+  return done(previous, await intelWrite(`/channels/${seg(text(data, "channel_id"))}/study/remove`, { video_id: text(data, "video_id") }), "/explorer");
+}
+
+// --- Competitor Intelligence -------------------------------------------------------------------
+
+export async function addCompetitorRef(previous: ActionState, data: FormData): Promise<ActionState> {
+  const channel = text(data, "channel_id");
+  return done(previous, await intelWrite(`/channels/${seg(channel)}/competitors`, { reference: text(data, "reference"), name: text(data, "name"), notes: text(data, "notes") }), `/canais/${channel}/concorrentes`, `/canais/${channel}`);
+}
+
+export async function linkCompetitor(previous: ActionState, data: FormData): Promise<ActionState> {
+  const channel = text(data, "channel_id");
+  return done(previous, await intelWrite(`/channels/${seg(channel)}/competitors/${seg(text(data, "competitor_id"))}/link`, { reference: text(data, "reference") }), `/canais/${channel}/concorrentes`);
+}
+
+export async function refreshCompetitor(previous: ActionState, data: FormData): Promise<ActionState> {
+  const channel = text(data, "channel_id");
+  const id = text(data, "competitor_id");
+  return done(previous, await intelWrite(`/channels/${seg(channel)}/competitors/${seg(id)}/refresh`), `/canais/${channel}/concorrentes`, `/canais/${channel}/concorrentes/${id}`);
+}
+
+export async function addOpportunity(previous: ActionState, data: FormData): Promise<ActionState> {
+  const channel = text(data, "channel_id");
+  return done(previous, await intelWrite(`/channels/${seg(channel)}/opportunities`, { title: text(data, "title"), note: text(data, "note"), video_id: text(data, "video_id") || null }), `/canais/${channel}/concorrentes`);
+}
+
+export async function discardOpportunity(previous: ActionState, data: FormData): Promise<ActionState> {
+  const channel = text(data, "channel_id");
+  return done(previous, await intelWrite(`/channels/${seg(channel)}/opportunities/${seg(text(data, "opportunity_id"))}/discard`), `/canais/${channel}/concorrentes`);
+}
+
+export async function opportunityToIdea(previous: ActionState, data: FormData): Promise<ActionState> {
+  const channel = text(data, "channel_id");
+  return done(previous, await intelWrite(`/channels/${seg(channel)}/opportunities/${seg(text(data, "opportunity_id"))}/idea`, { format: text(data, "format") }), `/canais/${channel}/concorrentes`, `/canais/${channel}`);
+}

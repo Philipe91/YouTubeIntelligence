@@ -50,6 +50,39 @@ export interface ForYou {
   channel_id: string; items: { term: string; reason: string; origin: string }[]; trends_blocked: boolean; trends_reason: string | null; uses_research: boolean; fictional: boolean;
 }
 
+export interface ExplorerResult {
+  total: number; limit: number; offset: number; items: VideoRow[]; sort: string; notes: string[]; derived_allowed: boolean;
+  blocked_reason: string | null; origin_note: string | null; fictional: boolean;
+}
+export interface StudyItem {
+  video: VideoRow; note: string; origin: string; added_at: string;
+  snapshots: { count: number; first_at: string | null; first_views: number | null; last_at: string | null; last_views: number | null };
+}
+export interface TitleFeatures { characters: number; words: number; has_number: boolean; is_question: boolean; approach: string; approach_label: string; caps_words: number }
+export interface StudyComparison {
+  columns: { video: VideoRow; note: string; features: TitleFeatures | null }[]; features_blocked: boolean; reason: string | null; shared_words: string[]; note: string;
+}
+export interface CompetitorSummary {
+  id: string; name: string; notes: string; youtube_ref: string | null; research_id: string | null; linked: boolean; videos_collected: number;
+  last_published_at: string | null; recent_days_uploads: string[];
+  channel: { title: string; handle: string | null; country: string | null; source_url: string | null; subscribers: Metric; text_refreshed_at: string } | null;
+}
+export interface EditorialColumns { sample_size: number; uploads_per_week: number | null; median_duration_seconds: number | null; question_title_share: number | null; top_weekday: string | null }
+export interface CompetitorOverview {
+  channel: { id: string; name: string; is_demo: boolean }; usable: boolean; items: CompetitorSummary[];
+  comparison: { name: string; research_id: string; formats: Record<string, EditorialColumns> }[] | null;
+  comparison_blocked: boolean; reason: string | null; origin_note: string | null; fictional: boolean; has_api_key: boolean; mode: string; demo_options: { id: string; title: string }[];
+}
+export interface EditorialProfile extends EditorialColumns { median_gap_days: number | null; median_title_words: number | null; number_title_share: number | null; top_terms: [string, number][] }
+export interface CompetitorDetail {
+  competitor: { id: string; name: string; notes: string; youtube_ref: string | null }; linked: boolean; usable: boolean; summary: CompetitorSummary | null; fictional?: boolean;
+  videos?: { total: number; limit: number; offset: number; items: VideoRow[] };
+  calendar?: { day: string; videos: { id: string; title: string; format: string }[] }[]; calendar_days?: number;
+  editorial?: Record<string, EditorialProfile> | null; title_patterns?: { pattern: string; videos: number }[]; recurring_subjects?: { term: string; videos: number }[];
+  patterns_blocked?: boolean; reason?: string | null; origin_note?: string | null; study_ids?: string[];
+}
+export interface EditorialOpportunity { id: string; title: string; note: string; video_id: string | null; video_title: string | null; source_url: string | null; status: string; recommendation_id: string | null; created_at: string }
+
 export async function intelGet<T>(path: string, params?: Record<string, string | undefined>): Promise<T> {
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(params ?? {})) if (value) query.set(key, value);

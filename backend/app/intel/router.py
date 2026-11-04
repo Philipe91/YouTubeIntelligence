@@ -13,8 +13,8 @@ from ..db import connect, migrate, utcnow
 from ..deps import settings_dep
 from ..policy import policy_state
 from ..studio.router import studio_conn
-from ..studio.store import list_channels
-from . import keywords, research
+from ..studio.store import get_channel, list_channels
+from . import competitors, explorer, keywords, research
 from .common import ClientFactory, compatible, default_client
 
 router = APIRouter(prefix="/api/intel")
@@ -178,3 +178,121 @@ def own_terms(channel_id: str, conn=Depends(research_db), studio=Depends(studio_
 @router.get("/channels/{channel_id}/keywords/for-you")
 def for_you(channel_id: str, conn=Depends(research_db), studio=Depends(studio_conn), settings=Depends(settings_dep)):
     return keywords.for_channel(conn, studio, settings, channel_id)
+
+
+# --- Outlier Explorer -----------------------------------------------------------------------------
+
+@router.get("/explorer")
+def explorer_search(q: str | None = None, days: int | None = Query(default=None, ge=1, le=3650), format: str = "long", sort: str = "views", only_above: bool = False,
+                    min_views: int | None = Query(default=None, ge=0), limit: int = PageLimit, offset: int = PageOffset, conn=Depends(research_db), settings=Depends(settings_dep)):
+    return explorer.search(conn, settings, q=q, days=days, video_format=format, sort=sort, only_above=only_above, min_views=min_views, limit=limit, offset=offset)
+
+
+@router.get("/channels/{channel_id}/study")
+def study_list(channel_id: str, origin: str | None = None, limit: int = PageLimit, offset: int = PageOffset, conn=Depends(research_db), studio=Depends(studio_conn), settings=Depends(settings_dep)):
+    get_channel(studio, channel_id)
+    return explorer.list_study(conn, settings, channel_id, origin=origin, limit=limit, offset=offset)
+
+
+@router.get("/channels/{channel_id}/study/ids")
+def study_id_list(channel_id: str, conn=Depends(research_db)):
+    return {"ids": explorer.study_ids(conn, channel_id)}
+
+
+@router.get("/channels/{channel_id}/study/compare")
+def study_compare(channel_id: str, ids: str, conn=Depends(research_db), settings=Depends(settings_dep)):
+    return explorer.compare_videos(conn, settings, channel_id, [item for item in ids.split(",") if item])
+
+
+class StudyBody(BaseModel):
+    video_id: str
+    origin: str = "explorer"
+    note: str = ""
+
+
+@router.post("/channels/{channel_id}/study", status_code=201)
+def study_add(channel_id: str, body: StudyBody, conn=Depends(research_db), studio=Depends(studio_conn), settings=Depends(settings_dep)):
+    return explorer.add_study(conn, studio, settings, channel_id, body.video_id, utcnow(), body.origin, body.note)
+
+
+@router.post("/channels/{channel_id}/study/note")
+def study_note(channel_id: str, body: StudyBody, conn=Depends(research_db)):
+    explorer.update_study_note(conn, channel_id, body.video_id, body.note)
+    return {"updated": body.video_id}
+
+
+@router.post("/channels/{channel_id}/study/remove")
+def study_remove(channel_id: str, body: StudyBody, conn=Depends(research_db)):
+    explorer.remove_study(conn, channel_id, body.video_id)
+    return {"removed": body.video_id}
+
+
+# --- Competitor Intelligence ----------------------------------------------------------------------
+
+@router.get("/channels/{channel_id}/competitors")
+def competitor_overview(channel_id: str, conn=Depends(research_db), studio=Depends(studio_conn), settings=Depends(settings_dep)):
+    return competitors.overview(conn, studio, settings, channel_id, utcnow())
+
+
+@router.get("/channels/{channel_id}/competitors/report.md")
+def competitor_report(channel_id: str, conn=Depends(research_db), studio=Depends(studio_conn), settings=Depends(settings_dep)):
+    body, filename = competitors.report(conn, studio, settings, channel_id, utcnow())
+    return Response(content=body.encode("utf-8"), media_type="text/markdown; charset=utf-8", headers={"Content-Disposition": f'attachment; filename="{filename}"', "X-Content-Type-Options": "nosniff"})
+
+
+@router.get("/channels/{channel_id}/competitors/{competitor_id}")
+def competitor_detail(channel_id: str, competitor_id: str, limit: int = Query(default=20, ge=1, le=50), offset: int = PageOffset, conn=Depends(research_db), studio=Depends(studio_conn), settings=Depends(settings_dep)):
+    return competitors.detail(conn, studio, settings, channel_id, competitor_id, utcnow(), limit, offset)
+
+
+class CompetitorBody(BaseModel):
+    reference: str
+    name: str = ""
+    notes: str = ""
+
+
+@router.post("/channels/{channel_id}/competitors", status_code=201)
+def competitor_add(channel_id: str, body: CompetitorBody, conn=Depends(research_db), studio=Depends(studio_conn), settings=Depends(settings_dep), factory=Depends(client_factory)):
+    return competitors.add(conn, studio, settings, channel_id, body.reference, body.name, body.notes, utcnow(), factory)
+
+
+@router.post("/channels/{channel_id}/competitors/{competitor_id}/link")
+def competitor_link(channel_id: str, competitor_id: str, body: CompetitorBody, conn=Depends(research_db), studio=Depends(studio_conn), settings=Depends(settings_dep), factory=Depends(client_factory)):
+    return competitors.link(conn, studio, settings, channel_id, competitor_id, body.reference, utcnow(), factory)
+
+
+@router.post("/channels/{channel_id}/competitors/{competitor_id}/refresh")
+def competitor_refresh(channel_id: str, competitor_id: str, conn=Depends(research_db), studio=Depends(studio_conn), settings=Depends(settings_dep), factory=Depends(client_factory)):
+    return competitors.refresh(conn, studio, settings, channel_id, competitor_id, utcnow(), factory)
+
+
+@router.get("/channels/{channel_id}/opportunities")
+def opportunities(channel_id: str, conn=Depends(research_db), studio=Depends(studio_conn)):
+    get_channel(studio, channel_id)
+    return {"items": competitors.list_opportunities(conn, channel_id)}
+
+
+class OpportunityBody(BaseModel):
+    title: str
+    note: str = ""
+    video_id: str | None = None
+
+
+@router.post("/channels/{channel_id}/opportunities", status_code=201)
+def opportunity_add(channel_id: str, body: OpportunityBody, conn=Depends(research_db), studio=Depends(studio_conn), settings=Depends(settings_dep)):
+    return competitors.add_opportunity(conn, studio, settings, channel_id, body.title, body.note, body.video_id, utcnow())
+
+
+@router.post("/channels/{channel_id}/opportunities/{opportunity_id}/discard")
+def opportunity_discard(channel_id: str, opportunity_id: str, conn=Depends(research_db)):
+    competitors.discard_opportunity(conn, channel_id, opportunity_id, utcnow())
+    return {"discarded": opportunity_id}
+
+
+class ToIdeaBody(BaseModel):
+    format: str
+
+
+@router.post("/channels/{channel_id}/opportunities/{opportunity_id}/idea", status_code=201)
+def opportunity_idea(channel_id: str, opportunity_id: str, body: ToIdeaBody, conn=Depends(research_db), studio=Depends(studio_conn)):
+    return competitors.opportunity_to_idea(conn, studio, channel_id, opportunity_id, body.format, utcnow())

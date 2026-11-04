@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { Bars, ViewsChart } from "@/components/Charts";
+import { StudyForm } from "@/components/StudyForm";
 import { Value } from "@/components/Mark";
 import { AccelerationPill, BandPill, BlockedNotice, ConfidencePill, PageHeader, Panel, Pill, SectionTitle, SourceLink, Thumb } from "@/components/ui";
 import { apiOrNull, type VideoDetail } from "@/lib/api";
@@ -27,6 +28,7 @@ export default async function VideoPage({ params }: { params: Promise<{ id: stri
       <PageHeader title={video.title}>
         <SourceLink url={video.source_url} />
       </PageHeader>
+      <StudyForm videoId={video.id} />
       <div className="mb-5 -mt-3 flex flex-wrap items-center gap-3 text-sm text-ink-2">
         <Thumb video={video} />
         <div className="space-y-1">

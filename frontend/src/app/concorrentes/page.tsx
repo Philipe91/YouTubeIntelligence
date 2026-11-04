@@ -13,13 +13,13 @@ export default async function Competitors({ searchParams }: { searchParams: Prom
   const data = await api<Response>("/api/channels/compare", { format });
   return (
     <>
-      <PageHeader title="Concorrentes" intro="Padrões editoriais lado a lado, no mesmo formato. Para cadastrar um canal, use o comando add-channel descrito no README.">
+      <PageHeader title="Concorrentes" intro="Padrões editoriais de todos os canais monitorados, lado a lado e no mesmo formato. A lista de cada canal fica em Meus canais dark.">
         <FormatTabs current={format} basePath="/concorrentes" />
       </PageHeader>
       {data.blocked ? <BlockedNotice reason={data.reason} /> : (
         <>
           <Panel>
-            {data.rows.length === 0 ? <Empty title="Nenhum canal monitorado.">Cadastre o primeiro com o comando add-channel.</Empty> : (
+            {data.rows.length === 0 ? <Empty title="Nenhum canal monitorado.">Cadastre o primeiro na página do seu canal, em Meus canais dark.</Empty> : (
               <div className="overflow-x-auto">
                 <table className="data-table w-full min-w-[56rem]">
                   <thead>
